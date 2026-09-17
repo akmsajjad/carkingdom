@@ -1,111 +1,162 @@
-:root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+@import 'tailwindcss';
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+/* ==========================================================================
+   Car Kingdom — Design System
+   ==========================================================================
+   Design tokens live here and nowhere else. Components consume them through
+   Tailwind utilities (bg-brand-700, text-accent-500, shadow-card, ...), so a
+   change to this file propagates through the whole application.
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+   Palette rationale: a deep navy reads as trustworthy and professional (the
+   dealership's core promise), with a warm gold accent for calls to action and
+   "kingdom" branding. Neutrals stay cool to keep the automotive photography
+   the loudest thing on the page.
+   ========================================================================== */
 
-  @media (max-width: 1024px) {
-    font-size: 16px;
+@theme {
+  /* Brand — deep navy */
+  --color-brand-50: #eff5fb;
+  --color-brand-100: #d9e7f5;
+  --color-brand-200: #b6d0eb;
+  --color-brand-300: #86b0dc;
+  --color-brand-400: #4f88c8;
+  --color-brand-500: #2b6ab0;
+  --color-brand-600: #1f5394;
+  --color-brand-700: #1b4378;
+  --color-brand-800: #173763;
+  --color-brand-900: #0f2647;
+  --color-brand-950: #091a33;
+
+  /* Accent — gold */
+  --color-accent-50: #fffbeb;
+  --color-accent-100: #fef3c7;
+  --color-accent-200: #fde68a;
+  --color-accent-300: #fcd34d;
+  --color-accent-400: #fbbf24;
+  --color-accent-500: #f59e0b;
+  --color-accent-600: #d97706;
+  --color-accent-700: #b45309;
+  --color-accent-800: #92400e;
+  --color-accent-900: #78350f;
+
+  /* Typography */
+  --font-sans:
+    'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    sans-serif;
+  --font-display:
+    'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    sans-serif;
+
+  /* Shadows — deliberately subtle; a dealership site should feel crisp, not
+     puffy. */
+  --shadow-card: 0 1px 2px rgb(9 26 51 / 0.04), 0 4px 12px rgb(9 26 51 / 0.06);
+  --shadow-card-hover:
+    0 2px 4px rgb(9 26 51 / 0.06), 0 12px 28px rgb(9 26 51 / 0.12);
+  --shadow-header: 0 1px 3px rgb(9 26 51 / 0.08);
+
+  /* Layout */
+  --spacing-header: 4.5rem;
+
+  /* Motion — used sparingly. The brief calls for smooth transitions, not a
+     page that animates everything. */
+  --animate-toast-in: toast-in 0.2s ease-out;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-@media (prefers-color-scheme: dark) {
+/* ==========================================================================
+   Base
+   ========================================================================== */
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Light mode only for now — a dealership site reads as clean and bright,
+     and it keeps photography consistent. */
   :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+    color-scheme: light;
   }
 
-  #social .button-icon {
-    filter: invert(1) brightness(2);
+  body {
+    @apply bg-white font-sans text-slate-700 antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display text-brand-950;
+    text-wrap: balance;
+  }
+
+  /* Headings are sized by the components that use them, not globally, so a
+     page can choose its own hierarchy. */
+
+  /* Visible, consistent focus ring for keyboard users. Never remove this
+     without replacing it with something equally visible. */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-accent-500;
+  }
+
+  /* Images should never overflow their container, and should not jump as
+     they load. */
+  img {
+    @apply max-w-full;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
-body {
-  margin: 0;
+/* ==========================================================================
+   Utilities
+   ========================================================================== */
+
+@utility container-page {
+  /* Single source of truth for horizontal page rhythm. */
+  @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
 }
 
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
+@utility skeleton-shimmer {
+  /* Used by the Skeleton component. */
+  background: linear-gradient(
+    90deg,
+    var(--color-slate-200) 25%,
+    var(--color-slate-100) 37%,
+    var(--color-slate-200) 63%
+  );
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 100% 50%;
   }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
+  100% {
+    background-position: 0 50%;
   }
-}
-p {
-  margin: 0;
-}
-
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
 }

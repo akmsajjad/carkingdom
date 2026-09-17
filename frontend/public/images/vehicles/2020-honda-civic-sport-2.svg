@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600" role="img" aria-label="2020 Honda Civic">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eff5fb"/>
+      <stop offset="1" stop-color="#d7e5f5"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <rect x="16" y="16" width="768" height="568" rx="20"
+        fill="none" stroke="#c8102e" stroke-opacity="0.18" stroke-width="2"/>
+  
+  <g transform="translate(0, -10)">
+    <path d="M150 372 L150 330 Q150 308 172 306 L246 300 L300 242 Q312 228 330 228 L470 228 Q488 228 500 242 L554 300 L628 306 Q650 308 650 330 L650 372 Z"
+          fill="#c8102e" fill-opacity="0.14" stroke="#c8102e" stroke-width="14" stroke-linejoin="round"/>
+    <circle cx="248" cy="376" r="46" fill="none" stroke="#c8102e" stroke-width="14"/>
+    <circle cx="552" cy="376" r="46" fill="none" stroke="#c8102e" stroke-width="14"/>
+  </g>
+  <text x="400" y="500" text-anchor="middle"
+        font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="26"
+        font-weight="600" fill="#33475f">2020 Honda Civic</text>
+  <text x="400" y="536" text-anchor="middle"
+        font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="19"
+        fill="#6b7d92">Sport · Side profile</text>
+</svg>

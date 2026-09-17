@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600" role="img" aria-label="Car Kingdom careers">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eff5fb"/>
+      <stop offset="1" stop-color="#d7e5f5"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <rect x="16" y="16" width="768" height="568" rx="20"
+        fill="none" stroke="#2c5f9e" stroke-opacity="0.18" stroke-width="2"/>
+  
+    <g transform="translate(0, -10)" fill="none" stroke="#2c5f9e" stroke-width="14"
+       stroke-linejoin="round">
+      <rect x="196" y="286" width="408" height="220" rx="22"/>
+      <path d="M330 286 L330 250 Q330 232 348 232 L452 232 Q470 232 470 250 L470 286"/>
+      <path d="M196 372 L604 372"/>
+      <path d="M368 372 L368 400 Q368 412 380 412 L420 412 Q432 412 432 400 L432 372"/>
+    </g>
+  <text x="400" y="500" text-anchor="middle"
+        font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="26"
+        font-weight="600" fill="#33475f">Car Kingdom careers</text>
+  <text x="400" y="536" text-anchor="middle"
+        font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="19"
+        fill="#6b7d92">Join the team</text>
+</svg>
