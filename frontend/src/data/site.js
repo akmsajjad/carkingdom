@@ -27,10 +27,32 @@ export const SITE = {
 
   googleMapsUrl: 'https://maps.app.goo.gl/uxjEnynQ4kREMhwL7',
 
+  // `days` and `time` are what customers read. `weekdays`, `open` and `close`
+  // are the same facts in a form code can use, because the appointment and
+  // test-drive pickers have to know which days are open and which hours are
+  // bookable. Keeping both here means changing the hours on a sign changes the
+  // booking form too — the alternative is a hardcoded slot list in a component
+  // that quietly keeps offering 5pm on a Saturday after the lot starts closing
+  // at 3.
+  //
+  // `weekdays` is JavaScript's `getDay()` numbering: 0 is Sunday.
+  // `open`/`close` are 24-hour `HH:MM`, local time.
   hours: [
-    { days: 'Monday – Friday', time: '9:00 AM – 6:00 PM' },
-    { days: 'Saturday', time: '10:00 AM – 5:00 PM' },
-    { days: 'Sunday', time: 'Closed' },
+    {
+      days: 'Monday – Friday',
+      time: '9:00 AM – 6:00 PM',
+      weekdays: [1, 2, 3, 4, 5],
+      open: '09:00',
+      close: '18:00',
+    },
+    {
+      days: 'Saturday',
+      time: '10:00 AM – 5:00 PM',
+      weekdays: [6],
+      open: '10:00',
+      close: '17:00',
+    },
+    { days: 'Sunday', time: 'Closed', weekdays: [0], open: null, close: null },
   ],
 }
 

@@ -18,6 +18,7 @@ const Favorites = lazy(() => import('./pages/Favorites'))
 const Compare = lazy(() => import('./pages/Compare'))
 const Services = lazy(() => import('./pages/Services'))
 const ServiceDetails = lazy(() => import('./pages/ServiceDetails'))
+const Appointments = lazy(() => import('./pages/Appointments'))
 const Parts = lazy(() => import('./pages/Parts'))
 const ProductDetails = lazy(() => import('./pages/ProductDetails'))
 const Cart = lazy(() => import('./pages/Cart'))
@@ -43,6 +44,7 @@ export default function App() {
 
           <Route path="services" element={<Services />} />
           <Route path="services/:slug" element={<ServiceDetails />} />
+          <Route path="appointments" element={<Appointments />} />
 
           <Route path="parts" element={<Parts />} />
           <Route path="parts/:slug" element={<ProductDetails />} />

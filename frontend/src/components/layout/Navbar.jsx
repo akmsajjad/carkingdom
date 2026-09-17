@@ -155,7 +155,7 @@ export default function Navbar() {
 
             <div className="hidden pl-2 xl:block">
               <Button
-                to="/contact?intent=appointment"
+                to="/appointments"
                 variant="accent"
                 size="sm"
                 icon={CalendarCheck}

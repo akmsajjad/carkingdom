@@ -1,104 +1,10 @@
-import { useId } from 'react'
 import { RotateCcw } from 'lucide-react'
 import Button from '../common/Button'
-import Checkbox from '../common/Checkbox'
 import Drawer from '../common/Drawer'
+import FacetList, { LoneCheckbox, RangeInputs } from '../common/Facets'
+import FilterSection from '../common/FilterSection'
 import Input from '../common/Input'
-import FilterSection from './FilterSection'
 import { formatPrice } from '../../utils/format'
-
-/**
- * One group of facet checkboxes, shared by every facet section below.
- *
- * The ids come from `useId` rather than from the facet value, because this
- * panel is rendered twice — once in the desktop column, once in the mobile
- * drawer — and a literal id like `filter-make-Toyota` would exist twice in the
- * document. `htmlFor` resolves to the first match, so the drawer's label would
- * silently operate the hidden desktop input.
- */
-function FacetList({ group, options, selected, counts, onToggle }) {
-  const uid = useId()
-
-  if (!options?.length) return null
-
-  return (
-    <>
-      {options.map((value) => (
-        <Checkbox
-          key={value}
-          id={`${uid}-${group}-${value}`}
-          checked={selected.includes(value)}
-          onChange={() => onToggle(group, value)}
-          label={
-            <span className="flex flex-1 items-center justify-between gap-2">
-              <span>{value}</span>
-              {counts?.[value] != null && (
-                <span className="text-xs text-slate-400 tabular-nums">
-                  {counts[value]}
-                </span>
-              )}
-            </span>
-          }
-        />
-      ))}
-    </>
-  )
-}
-
-/** Its own component for the same reason `FacetList` generates its ids — the
- *  panel below is rendered twice. */
-function FeaturedCheckbox({ checked, onChange }) {
-  const id = useId()
-
-  return (
-    <Checkbox
-      id={id}
-      checked={checked}
-      onChange={onChange}
-      label="Featured vehicles only"
-    />
-  )
-}
-
-/** A paired min/max numeric range. Controlled straight from the URL — the mock
- *  service answers instantly, and `useAsync` discards a superseded response, so
- *  typing "15000" costs a few abandoned timers rather than a stale render. */
-function RangeInputs({ minKey, maxKey, minLabel, maxLabel, filters, onSetFilter, bounds, format = (v) => v }) {
-  return (
-    <>
-      <div className="flex items-center gap-2">
-        <Input
-          type="number"
-          inputMode="numeric"
-          min={bounds?.min}
-          max={bounds?.max}
-          placeholder="Min"
-          aria-label={minLabel}
-          value={filters[minKey] ?? ''}
-          onChange={(event) => onSetFilter(minKey, event.target.value)}
-        />
-        <span aria-hidden="true" className="text-slate-400">
-          –
-        </span>
-        <Input
-          type="number"
-          inputMode="numeric"
-          min={bounds?.min}
-          max={bounds?.max}
-          placeholder="Max"
-          aria-label={maxLabel}
-          value={filters[maxKey] ?? ''}
-          onChange={(event) => onSetFilter(maxKey, event.target.value)}
-        />
-      </div>
-      {bounds && (
-        <p className="text-xs text-slate-400">
-          Inventory ranges from {format(bounds.min)} to {format(bounds.max)}
-        </p>
-      )}
-    </>
-  )
-}
 
 /**
  * The filter sidebar, and the same panel again as a mobile drawer.
@@ -106,6 +12,10 @@ function RangeInputs({ minKey, maxKey, minLabel, maxLabel, filters, onSetFilter,
  * The panel markup is written once and rendered into both containers — a
  * desktop sticky column and a left slide-over — so the two can never disagree
  * about which filters exist.
+ *
+ * The individual controls — the facet checkbox groups, the standalone flags,
+ * the min/max ranges — live in `common/Facets`, because the parts catalogue
+ * needs the same three things and was otherwise a copy of this file.
  */
 export default function VehicleFilters({
   filters,
@@ -151,6 +61,7 @@ export default function VehicleFilters({
           onSetFilter={onSetFilter}
           bounds={options?.priceBounds}
           format={formatPrice}
+          hint={(min, max) => `Inventory ranges from ${min} to ${max}`}
         />
       </FilterSection>
 
@@ -244,9 +155,10 @@ export default function VehicleFilters({
       </FilterSection>
 
       <FilterSection title="Highlights">
-        <FeaturedCheckbox
+        <LoneCheckbox
           checked={filters.featured}
           onChange={() => onSetFilter('featured', !filters.featured)}
+          label="Featured vehicles only"
         />
       </FilterSection>
     </div>

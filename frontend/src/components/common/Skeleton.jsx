@@ -57,3 +57,47 @@ export function VehicleRowSkeleton() {
     </div>
   )
 }
+
+/**
+ * The parts equivalents. Taller than the vehicle skeletons by one row, because
+ * a part card carries a rating line and its own add-to-cart button below the
+ * price — approximating the vehicle shape here would let the grid jump when the
+ * real cards arrive, which is the one thing a skeleton exists to prevent.
+ */
+
+export function PartCardSkeleton() {
+  return (
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card">
+      <Skeleton className="aspect-4/3 w-full rounded-none!" />
+      <div className="space-y-3 p-5">
+        <Skeleton className="h-3 w-32" />
+        <Skeleton className="h-5 w-4/5" />
+        <Skeleton className="h-3.5 w-28" />
+        <Skeleton className="h-4 w-full" />
+        <div className="flex items-center justify-between pt-4">
+          <Skeleton className="h-6 w-24" />
+          <Skeleton className="h-4 w-16" />
+        </div>
+        <Skeleton className="h-9 w-full" />
+      </div>
+    </div>
+  )
+}
+
+export function PartRowSkeleton() {
+  return (
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card sm:flex">
+      <Skeleton className="aspect-4/3 w-full rounded-none! sm:aspect-auto sm:min-h-52 sm:w-64 lg:w-72" />
+      <div className="flex-1 space-y-3 p-5">
+        <Skeleton className="h-3 w-48" />
+        <Skeleton className="h-6 w-2/3" />
+        <Skeleton className="h-3.5 w-32" />
+        <Skeleton className="h-4 w-full" />
+        <div className="flex items-center justify-between pt-4">
+          <Skeleton className="h-6 w-24" />
+          <Skeleton className="h-9 w-32" />
+        </div>
+      </div>
+    </div>
+  )
+}

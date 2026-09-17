@@ -2,6 +2,7 @@
  * Navigation structure, in one place. The navbar, the mobile drawer, and the
  * footer all read from here, so adding a page means editing one array.
  */
+import { FEATURED_SERVICE_SLUGS, SERVICES } from './services'
 
 export const NAV_LINKS = [
   { label: 'Home', to: '/' },
@@ -12,6 +13,23 @@ export const NAV_LINKS = [
   { label: 'About', to: '/about' },
   { label: 'Contact', to: '/contact' },
 ]
+
+/**
+ * The footer's service column is built from the catalogue rather than typed
+ * out. The hand-written version listed four slugs — `brake-suspension-services`,
+ * `tire-wheel-services`, `engine-transmission`, `detailing` — of which only one
+ * was ever real, and they sat there pointing at nothing until the service pages
+ * started returning 404s for unknown slugs. Deriving the list means a service
+ * that is renamed or removed cannot leave a dead link behind.
+ */
+const SERVICE_LINKS = FEATURED_SERVICE_SLUGS.map((slug) =>
+  SERVICES.find((service) => service.slug === slug),
+)
+  .filter(Boolean)
+  .map((service) => ({
+    label: service.shortName,
+    to: `/services/${service.slug}`,
+  }))
 
 export const FOOTER_SECTIONS = [
   {
@@ -37,11 +55,8 @@ export const FOOTER_SECTIONS = [
     title: 'Services',
     links: [
       { label: 'All Services', to: '/services' },
-      { label: 'Oil Change', to: '/services/oil-change' },
-      { label: 'Brakes', to: '/services/brake-suspension-services' },
-      { label: 'Tires', to: '/services/tire-wheel-services' },
-      { label: 'Engine', to: '/services/engine-transmission' },
-      { label: 'Detailing', to: '/services/detailing' },
+      ...SERVICE_LINKS,
+      { label: 'Book an Appointment', to: '/appointments' },
     ],
   },
   {

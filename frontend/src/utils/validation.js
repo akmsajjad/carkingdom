@@ -1,10 +1,13 @@
 /**
  * Field validation for the lead forms.
  *
- * Kept as plain predicates rather than a schema library: there are three forms
- * and four rules, and a dependency would be more code to read than the rules
- * themselves. The messages are written as sentences addressed to the customer,
- * because they are the only feedback they get when a submission is refused.
+ * Kept as plain predicates rather than a schema library: the rules are few and
+ * a dependency would be more code to read than the rules themselves. The
+ * messages are written as sentences addressed to the customer, because they are
+ * the only feedback they get when a submission is refused.
+ *
+ * Date and opening-hours rules are deliberately NOT here — they live in
+ * `scheduling.js`, which is the only module that knows when the shop is open.
  */
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
@@ -56,22 +59,4 @@ export function validateContact({ name, email, phone }) {
   }
 
   return errors
-}
-
-/** Today in the `YYYY-MM-DD` form a date input expects, in local time.
- *  `toISOString` would convert to UTC first and hand back yesterday for anyone
- *  west of Greenwich after 6pm — which is everyone in Saskatchewan. */
-export function todayIso() {
-  const now = new Date()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-  return `${now.getFullYear()}-${month}-${day}`
-}
-
-/** True when the given `YYYY-MM-DD` falls on a Sunday, when the lot is closed. */
-export function isSunday(iso) {
-  if (!iso) return false
-  const date = new Date(`${iso}T12:00:00`)
-  if (Number.isNaN(date.getTime())) return false
-  return date.getDay() === 0
 }

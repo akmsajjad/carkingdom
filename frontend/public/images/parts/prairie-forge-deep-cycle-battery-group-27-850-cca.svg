@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600" role="img" aria-label="Deep Cycle Battery — Group 27, 850 CCA">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eff5fb"/>
+      <stop offset="1" stop-color="#d7e5f5"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <rect x="16" y="16" width="768" height="568" rx="20"
+        fill="none" stroke="#2c5f9e" stroke-opacity="0.18" stroke-width="2"/>
+  
+    <g transform="translate(0, -10)" fill="none" stroke="#2c5f9e" stroke-width="14"
+       stroke-linecap="round" stroke-linejoin="round">
+      <rect x="248" y="252" width="304" height="216" rx="22"/>
+      <path d="M318 252 L318 212 L374 212 L374 252"/>
+      <path d="M426 252 L426 212 L482 212 L482 252"/>
+      <g stroke-width="13">
+        <path d="M296 330 L352 330"/>
+        <path d="M448 330 L504 330"/><path d="M476 302 L476 358"/>
+      </g>
+    </g>
+  <text x="400" y="500" text-anchor="middle"
+        font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="26"
+        font-weight="600" fill="#33475f">Deep Cycle Battery — Group 27, 850 CCA</text>
+  <text x="400" y="536" text-anchor="middle"
+        font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="19"
+        fill="#6b7d92">Prairie Forge · Battery</text>
+</svg>

@@ -1,14 +1,13 @@
 import { LayoutGrid, List, LoaderCircle, Search, SlidersHorizontal, X } from 'lucide-react'
-import Button from '../common/Button'
-import Input from '../common/Input'
-import Select from '../common/Select'
+import Button from './Button'
+import Input from './Input'
+import Select from './Select'
 import { cn } from '../../utils/cn'
-import { SORT_OPTIONS } from '../../data/vehicles'
 
 /** Grid / list switch. Two pressed-state buttons rather than a single toggle,
  *  because "which view am I in" is a question about the current state, and
  *  `aria-pressed` answers it directly. */
-function ViewToggle({ view, onChange }) {
+function ViewToggle({ view, onChange, label }) {
   const options = [
     { value: 'grid', icon: LayoutGrid, label: 'Grid view' },
     { value: 'list', icon: List, label: 'List view' },
@@ -17,16 +16,16 @@ function ViewToggle({ view, onChange }) {
   return (
     <div
       role="group"
-      aria-label="Result layout"
+      aria-label={label}
       className="inline-flex shrink-0 rounded-lg border border-slate-300 bg-white p-0.5"
     >
-      {options.map(({ value, icon: Icon, label }) => (
+      {options.map(({ value, icon: Icon, label: optionLabel }) => (
         <button
           key={value}
           type="button"
           aria-pressed={view === value}
-          aria-label={label}
-          title={label}
+          aria-label={optionLabel}
+          title={optionLabel}
           onClick={() => onChange(value)}
           className={cn(
             'inline-flex size-9 items-center justify-center rounded-md transition-colors',
@@ -44,9 +43,14 @@ function ViewToggle({ view, onChange }) {
 }
 
 /**
- * The bar above the results: how many cars matched, the keyword search, sort
- * order, layout, and — on small screens only — the button that opens the
+ * The bar above any catalogue's results: how many matched, the keyword search,
+ * sort order, layout, and — on small screens only — the button that opens the
  * filter drawer.
+ *
+ * Shared by the vehicle marketplace and the parts catalogue. Everything that
+ * differs between them is a prop: the noun in the count, the search
+ * placeholder, and the sort options. That is the whole difference, and it is
+ * data rather than behaviour.
  *
  * The search writes to the URL on every keystroke rather than debouncing into
  * local state. Keeping one source of truth means "Clear all", a removed chip
@@ -55,13 +59,19 @@ function ViewToggle({ view, onChange }) {
  * effect. Progress is reported by the spinner beside the count instead of by
  * dimming the grid, which would flicker on every character.
  */
-export default function VehicleToolbar({
+export default function ResultsToolbar({
   total = 0,
   page = 1,
   pageSize = 0,
   loading = false,
   hasResults = false,
   filters,
+  sortOptions = [],
+  noun = { singular: 'result', plural: 'results' },
+  searchPlaceholder = 'Search',
+  searchLabel = 'Search',
+  resultsLabel = 'Result layout',
+  sortLabel = 'Sort results',
   onSetFilter,
   onOpenFilters,
   activeCount = 0,
@@ -81,8 +91,8 @@ export default function VehicleToolbar({
           type="search"
           value={filters.q}
           onChange={(event) => onSetFilter('q', event.target.value)}
-          placeholder="Search by make, model, colour, or stock number"
-          aria-label="Search inventory"
+          placeholder={searchPlaceholder}
+          aria-label={searchLabel}
           className={cn('pl-10', filters.q && 'pr-10')}
         />
         {filters.q && (
@@ -100,7 +110,7 @@ export default function VehicleToolbar({
       <div className="flex flex-wrap items-center gap-2">
         <p aria-live="polite" className="mr-auto text-sm text-slate-600">
           {total === 0 ? (
-            'No vehicles'
+            <>No {noun.plural}</>
           ) : (
             <>
               Showing{' '}
@@ -111,7 +121,7 @@ export default function VehicleToolbar({
               <span className="font-semibold text-brand-900 tabular-nums">
                 {total}
               </span>{' '}
-              {total === 1 ? 'vehicle' : 'vehicles'}
+              {total === 1 ? noun.singular : noun.plural}
             </>
           )}
           {loading && hasResults && (
@@ -143,16 +153,17 @@ export default function VehicleToolbar({
 
         <div className="w-44 shrink-0">
           <Select
-            aria-label="Sort vehicles"
+            aria-label={sortLabel}
             value={filters.sort}
             onChange={(event) => onSetFilter('sort', event.target.value)}
-            options={SORT_OPTIONS}
+            options={sortOptions}
           />
         </div>
 
         <ViewToggle
           view={filters.view}
           onChange={(value) => onSetFilter('view', value)}
+          label={resultsLabel}
         />
       </div>
     </div>

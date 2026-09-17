@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600" role="img" aria-label="Beam Wiper Blade — 24 in">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eff5fb"/>
+      <stop offset="1" stop-color="#d7e5f5"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <rect x="16" y="16" width="768" height="568" rx="20"
+        fill="none" stroke="#2c5f9e" stroke-opacity="0.18" stroke-width="2"/>
+  
+    <g transform="translate(0, -10)" fill="none" stroke="#2c5f9e" stroke-width="14"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M186 468 A268 268 0 0 1 614 468" stroke-dasharray="26 22"/>
+      <path d="M262 392 L538 392" stroke-width="24"/>
+      <path d="M400 392 L400 462"/>
+      <circle cx="400" cy="480" r="22"/>
+    </g>
+  <text x="400" y="500" text-anchor="middle"
+        font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="26"
+        font-weight="600" fill="#33475f">Beam Wiper Blade — 24 in</text>
+  <text x="400" y="536" text-anchor="middle"
+        font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="19"
+        fill="#6b7d92">Meridian · Wipers</text>
+</svg>

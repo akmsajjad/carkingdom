@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Clock, Mail, MapPin, Navigation, Phone } from 'lucide-react'
 import Logo from '../common/Logo'
+import OpeningHours from '../common/OpeningHours'
 import { FOOTER_SECTIONS } from '../../data/navigation'
 import { FULL_ADDRESS, MAILTO_HREF, SITE, TEL_HREF } from '../../data/site'
 
@@ -94,14 +95,7 @@ export default function Footer() {
             <Clock className="size-4 text-accent-400" aria-hidden="true" />
             Hours
           </h2>
-          <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-3">
-            {SITE.hours.map((entry) => (
-              <div key={entry.days} className="flex justify-between gap-4 sm:flex-col sm:gap-1">
-                <dt className="text-slate-400">{entry.days}</dt>
-                <dd className="font-medium text-slate-200">{entry.time}</dd>
-              </div>
-            ))}
-          </dl>
+          <OpeningHours tone="dark" columns className="mt-4" />
         </div>
       </div>
 

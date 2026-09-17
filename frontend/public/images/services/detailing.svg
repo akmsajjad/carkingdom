@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600" role="img" aria-label="Detailing &amp; Interior Cleaning">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eff5fb"/>
+      <stop offset="1" stop-color="#d7e5f5"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <rect x="16" y="16" width="768" height="568" rx="20"
+        fill="none" stroke="#2c5f9e" stroke-opacity="0.18" stroke-width="2"/>
+  
+    <g transform="translate(0, -10)" fill="none" stroke="#2c5f9e" stroke-width="14"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M356 200 Q356 300 256 300 Q356 300 356 400 Q356 300 456 300 Q356 300 356 200 Z"/>
+      <path d="M528 336 Q528 396 468 396 Q528 396 528 456 Q528 396 588 396 Q528 396 528 336 Z"/>
+      <path d="M244 420 Q244 470 194 470 Q244 470 244 520 Q244 470 294 470 Q244 470 244 420 Z"/>
+    </g>
+  <text x="400" y="500" text-anchor="middle"
+        font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="26"
+        font-weight="600" fill="#33475f">Detailing &amp; Interior Cleaning</text>
+  <text x="400" y="536" text-anchor="middle"
+        font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="19"
+        fill="#6b7d92">3–4 hours · from $179</text>
+</svg>

@@ -3,15 +3,15 @@ import { ChevronDown } from 'lucide-react'
 import { cn } from '../../utils/cn'
 
 /**
- * One collapsible group in the filter sidebar.
+ * One collapsible group in a filter sidebar.
  *
  * Built from a button and `aria-expanded` rather than the native `<details>`
  * element. `<details>` looks simpler, but its `open` attribute is a DOM
  * property React re-applies on every render, so toggling any filter would snap
  * every section back to its default state.
  *
- * Collapsed rather than hidden by default: eleven facet groups shown at once is
- * a wall, and the same markup serves as the mobile drawer's content.
+ * Collapsed rather than hidden by default: a dozen facet groups shown at once
+ * is a wall, and the same markup serves as the mobile drawer's content.
  */
 export default function FilterSection({ title, defaultOpen = false, children }) {
   const [open, setOpen] = useState(defaultOpen)

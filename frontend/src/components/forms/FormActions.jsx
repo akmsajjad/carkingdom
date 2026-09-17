@@ -10,13 +10,19 @@ import Button from '../common/Button'
  *
  * The submit button comes last in the DOM and is the accent-filled one, which
  * is the order the eye and the tab key both expect.
+ *
+ * `onCancel` is optional. A form in a dialog can always be dismissed, but one
+ * that owns a whole page has nothing to cancel back to, and a Cancel button
+ * that did nothing would be worse than no button.
  */
 export default function FormActions({ submitLabel, submitting, onCancel }) {
   return (
     <div className="flex flex-wrap justify-end gap-3 pt-1">
-      <Button variant="ghost" onClick={onCancel}>
-        Cancel
-      </Button>
+      {onCancel && (
+        <Button variant="ghost" onClick={onCancel}>
+          Cancel
+        </Button>
+      )}
       <Button type="submit" loading={submitting}>
         {submitLabel}
       </Button>

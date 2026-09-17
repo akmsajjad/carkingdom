@@ -20,5 +20,5 @@
         font-weight="600" fill="#33475f">2023 Hyundai Elantra</text>
   <text x="400" y="536" text-anchor="middle"
         font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="19"
-        fill="#6b7d92">Preferred · Wheels & trim</text>
+        fill="#6b7d92">Preferred · Wheels &amp; trim</text>
 </svg>

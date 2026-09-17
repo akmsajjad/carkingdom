@@ -1,16 +1,17 @@
 import { useRef, useState } from 'react'
 import { RotateCcw } from 'lucide-react'
+import ActiveFilterChips from '../components/common/ActiveFilterChips'
 import Button from '../components/common/Button'
 import PageHeader from '../components/common/PageHeader'
-import ActiveFilterChips from '../components/vehicles/ActiveFilterChips'
-import Pagination from '../components/vehicles/Pagination'
+import Pagination from '../components/common/Pagination'
+import ResultsToolbar from '../components/common/ResultsToolbar'
 import VehicleFilters from '../components/vehicles/VehicleFilters'
 import VehicleGrid from '../components/vehicles/VehicleGrid'
-import VehicleToolbar from '../components/vehicles/VehicleToolbar'
 import useAsync from '../hooks/useAsync'
 import useDocumentTitle from '../hooks/useDocumentTitle'
-import useVehicleFilters from '../hooks/useVehicleFilters'
+import useVehicleFilters, { FILTER_FIELDS } from '../hooks/useVehicleFilters'
 import { getVehicleFilterOptions, getVehicles } from '../services/vehicles'
+import { SORT_OPTIONS } from '../data/vehicles'
 
 export default function UsedCars() {
   useDocumentTitle('Used Cars for Sale')
@@ -81,19 +82,26 @@ export default function UsedCars() {
           />
 
           <div className="min-w-0 flex-1">
-            <VehicleToolbar
+            <ResultsToolbar
               total={total}
               page={currentPage}
               pageSize={pageSize}
               loading={loading}
               hasResults={vehicles.length > 0}
               filters={filters}
+              sortOptions={SORT_OPTIONS}
+              noun={{ singular: 'vehicle', plural: 'vehicles' }}
+              searchPlaceholder="Search by make, model, colour, or stock number"
+              searchLabel="Search inventory"
+              resultsLabel="Vehicle layout"
+              sortLabel="Sort vehicles"
               onSetFilter={setFilter}
               onOpenFilters={() => setDrawerOpen(true)}
               activeCount={activeCount}
             />
 
             <ActiveFilterChips
+              fields={FILTER_FIELDS}
               filters={filters}
               onToggleArray={toggleArrayFilter}
               onSetFilter={setFilter}

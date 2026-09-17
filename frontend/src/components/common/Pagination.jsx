@@ -30,18 +30,28 @@ const ARROW_CLASSES =
   'inline-flex size-10 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 transition-colors hover:bg-slate-50 hover:text-brand-900 disabled:pointer-events-none disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500'
 
 /**
- * Pagination for the marketplace.
+ * Pagination for any paged list.
  *
  * Rendered as navigation rather than as a list of buttons, and the current page
  * carries `aria-current="page"` — which is what tells a screen reader which
  * number in the row is the one you are on, rather than leaving it to colour.
+ *
+ * `label` is the only thing a caller might want to change: a screen-reader user
+ * hearing "Inventory pages" on the parts catalogue would reasonably think they
+ * had been sent back to the vehicles.
  */
-export default function Pagination({ page, totalPages, onChange, className }) {
+export default function Pagination({
+  page,
+  totalPages,
+  onChange,
+  label = 'Inventory pages',
+  className,
+}) {
   if (totalPages <= 1) return null
 
   return (
     <nav
-      aria-label="Inventory pages"
+      aria-label={label}
       className={cn('flex items-center justify-center gap-2', className)}
     >
       <button

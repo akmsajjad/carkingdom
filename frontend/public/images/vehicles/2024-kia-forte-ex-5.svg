@@ -20,5 +20,5 @@
         font-weight="600" fill="#33475f">2024 Kia Forte</text>
   <text x="400" y="536" text-anchor="middle"
         font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="19"
-        fill="#6b7d92">EX · Wheels & trim</text>
+        fill="#6b7d92">EX · Wheels &amp; trim</text>
 </svg>

@@ -1,12 +1,15 @@
 import { useId } from 'react'
 import { X } from 'lucide-react'
-import { FILTER_FIELDS } from '../../hooks/useVehicleFilters'
 import { cn } from '../../utils/cn'
 import { formatMileage, formatPrice } from '../../utils/format'
 
 const FORMATTERS = {
   price: formatPrice,
   mileage: formatMileage,
+  // A bare "4" next to "Rating" reads as a count of something. The star and
+  // the plus say which direction the number cuts, which is the part that
+  // decides whether the chip is describing the result set correctly.
+  rating: (value) => `${value}★ and up`,
 }
 
 /**
@@ -17,10 +20,12 @@ const FORMATTERS = {
  * drawer — without chips, an empty result set looks like a broken page rather
  * than the consequence of a filter set three screens ago.
  *
- * The chip list is derived from `FILTER_FIELDS`, so a new filter appears here
- * automatically.
+ * The chip list is derived from the `fields` table, so a new filter appears
+ * here automatically, and the same table drives parsing elsewhere. Any filter
+ * type not listed in `FORMATTERS` falls back to its raw value.
  */
 export default function ActiveFilterChips({
+  fields = [],
   filters,
   onToggleArray,
   onSetFilter,
@@ -30,7 +35,7 @@ export default function ActiveFilterChips({
   const labelId = useId()
   const chips = []
 
-  for (const { key, type, label, format } of FILTER_FIELDS) {
+  for (const { key, type, label, format } of fields) {
     const value = filters[key]
 
     if (type === 'array') {

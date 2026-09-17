@@ -29,10 +29,20 @@ export default function Select({
       >
         {placeholder && <option value="">{placeholder}</option>}
         {options.map((option) => {
-          const value = typeof option === 'string' ? option : option.value
-          const label = typeof option === 'string' ? option : option.label
+          // Three shapes are accepted, and the third is the one that bit: a
+          // bare value that is neither a string nor a `{ value, label }` pair.
+          // `yearsForVehicle` returns years as numbers, so `option.value` and
+          // `option.label` were both `undefined` — React omitted the `value`
+          // attribute and rendered an empty label, leaving a Year picker of
+          // blank rows that still submitted nothing. Anything that is not a
+          // plain object is now its own value and its own label.
+          const isPair =
+            option !== null && typeof option === 'object' && 'value' in option
+          const value = isPair ? option.value : option
+          const label = isPair ? option.label : option
+
           return (
-            <option key={value} value={value}>
+            <option key={String(value)} value={value}>
               {label}
             </option>
           )

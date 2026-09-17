@@ -20,6 +20,8 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { VEHICLES } from '../src/data/vehicles.js'
+import { SERVICES } from '../src/data/services.js'
+import { PARTS } from '../src/data/parts.js'
 
 const OUTPUT_ROOT = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -138,10 +140,34 @@ const GALLERY_FRAMES = [
   'Engine bay',
 ]
 
+/**
+ * Escapes text for XML.
+ *
+ * This is load-bearing, not hygiene. An SVG served as `image/svg+xml` is parsed
+ * as XML, where a bare `&` is a well-formedness error that kills the whole
+ * document — so `Oil & Filter Change` did not produce a slightly wrong label, it
+ * produced a file the browser refused to decode at all. Thirty-two of them:
+ * seven of the eight service images, and the "Wheels & trim" frame of every
+ * vehicle gallery.
+ *
+ * Nothing looked broken, because `OptimizedImage` catches the error and swaps in
+ * the category default. Every page rendered, just quietly with the wrong
+ * picture — which is why this survived two phases of testing.
+ */
+function escapeXml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
 function svg({ category, label, sublabel, stroke, glyph }) {
   const body = glyph ?? GLYPHS[category] ?? GLYPHS.general
+  const title = escapeXml(label)
+  const subtitle = escapeXml(sublabel)
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${WIDTH} ${HEIGHT}" width="${WIDTH}" height="${HEIGHT}" role="img" aria-label="${label}">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${WIDTH} ${HEIGHT}" width="${WIDTH}" height="${HEIGHT}" role="img" aria-label="${title}">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#eff5fb"/>
@@ -154,10 +180,10 @@ function svg({ category, label, sublabel, stroke, glyph }) {
   ${body}
   <text x="${WIDTH / 2}" y="500" text-anchor="middle"
         font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="26"
-        font-weight="600" fill="#33475f">${label}</text>
+        font-weight="600" fill="#33475f">${title}</text>
   <text x="${WIDTH / 2}" y="536" text-anchor="middle"
         font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="19"
-        fill="#6b7d92">${sublabel}</text>
+        fill="#6b7d92">${subtitle}</text>
 </svg>
 `
 }
@@ -183,6 +209,205 @@ const STATIC_FILES = [
   { path: 'general/about.svg', category: 'team', label: 'About Car Kingdom', sublabel: 'Locally owned in Saskatoon' },
 ]
 
+/**
+ * One glyph per service, keyed by the `icon` name in `src/data/services.js`.
+ *
+ * The generic spanner in `GLYPHS.services` is the fallback. Without these the
+ * catalogue is six identical pictures of a wrench, which reads as a broken page
+ * rather than as placeholder art.
+ */
+const SERVICE_GLYPHS = {
+  oil: `
+    <g transform="translate(0, -10)" fill="none" stroke="#2c5f9e" stroke-width="14"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M400 176 Q492 292 492 358 A92 92 0 1 1 308 358 Q308 292 400 176 Z"/>
+      <path d="M356 372 Q356 420 400 420"/>
+    </g>`,
+
+  brake: `
+    <g transform="translate(0, -10)" fill="none" stroke="#2c5f9e" stroke-width="14"
+       stroke-linejoin="round">
+      <circle cx="386" cy="330" r="126"/>
+      <circle cx="386" cy="330" r="44"/>
+      <path d="M520 236 L600 236 L600 424 L520 424 Z" stroke-linecap="round"/>
+      <g stroke-linecap="round">
+        <path d="M386 204 L386 286"/><path d="M386 374 L386 456"/>
+        <path d="M260 330 L342 330"/><path d="M430 330 L512 330"/>
+      </g>
+    </g>`,
+
+  tire: `
+    <g transform="translate(0, -10)" fill="none" stroke="#2c5f9e" stroke-width="14"
+       stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="400" cy="330" r="150"/>
+      <circle cx="400" cy="330" r="66"/>
+      <g stroke-width="12">
+        <path d="M400 180 L400 264"/><path d="M400 396 L400 480"/>
+        <path d="M250 330 L334 330"/><path d="M466 330 L550 330"/>
+        <path d="M294 224 L353 283"/><path d="M447 377 L506 436"/>
+        <path d="M506 224 L447 283"/><path d="M353 377 L294 436"/>
+      </g>
+    </g>`,
+
+  diagnostics: `
+    <g transform="translate(0, -10)" fill="none" stroke="#2c5f9e" stroke-width="14"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M228 438 A172 172 0 1 1 572 438"/>
+      <path d="M400 438 L492 306"/>
+      <circle cx="400" cy="438" r="20"/>
+      <g stroke-width="12">
+        <path d="M244 372 L272 366"/><path d="M400 268 L400 296"/>
+        <path d="M556 372 L528 366"/>
+      </g>
+    </g>`,
+
+  inspection: `
+    <g transform="translate(0, -10)" fill="none" stroke="#2c5f9e" stroke-width="14"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M286 232 L256 232 Q236 232 236 252 L236 500 Q236 520 256 520 L544 520 Q564 520 564 500 L564 252 Q564 232 544 232 L514 232"/>
+      <rect x="322" y="190" width="156" height="66" rx="18"/>
+      <path d="M296 356 L348 408 L500 268"/>
+    </g>`,
+
+  ac: `
+    <g transform="translate(0, -10)" fill="none" stroke="#2c5f9e" stroke-width="14"
+       stroke-linecap="round" stroke-linejoin="round">
+      <g stroke-width="13">
+        <path d="M400 190 L400 470"/>
+        <path d="M279 260 L521 400"/><path d="M521 260 L279 400"/>
+        <path d="M400 246 L362 208"/><path d="M400 246 L438 208"/>
+        <path d="M400 414 L362 452"/><path d="M400 414 L438 452"/>
+      </g>
+    </g>`,
+
+  engine: `
+    <g transform="translate(0, -10)" fill="none" stroke="#2c5f9e" stroke-width="14"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M262 268 L262 240 L478 240 L478 268 L538 268 L538 420 L478 420 L478 448 L262 448 L262 420 L216 420 L216 268 Z"/>
+      <g stroke-width="12">
+        <path d="M306 194 L306 240"/><path d="M366 194 L366 240"/><path d="M426 194 L426 240"/>
+      </g>
+    </g>`,
+
+  sparkle: `
+    <g transform="translate(0, -10)" fill="none" stroke="#2c5f9e" stroke-width="14"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M356 200 Q356 300 256 300 Q356 300 356 400 Q356 300 456 300 Q356 300 356 200 Z"/>
+      <path d="M528 336 Q528 396 468 396 Q528 396 528 456 Q528 396 588 396 Q528 396 528 336 Z"/>
+      <path d="M244 420 Q244 470 194 470 Q244 470 244 520 Q244 470 294 470 Q244 470 244 420 Z"/>
+    </g>`,
+}
+
+/**
+ * One glyph per part category, keyed by the `category` in `src/data/parts.js`.
+ *
+ * Keyed by category rather than by part, unlike the service glyphs: there are
+ * thirty-odd parts and hand-authoring thirty-odd distinct drawings would be a
+ * lot of placeholder art that real photography deletes. Parts within a category
+ * share a drawing, and the label under it names the actual product — "Meridian
+ * Ceramic Brake Pads — Front" over a rotor reads as a catalogue, not as a bug.
+ *
+ * `Brakes` and `Engine` reuse the service glyphs, which are already the right
+ * pictures.
+ */
+const PART_GLYPHS = {
+  Brakes: SERVICE_GLYPHS.brake,
+  Engine: SERVICE_GLYPHS.engine,
+
+  Battery: `
+    <g transform="translate(0, -10)" fill="none" stroke="#2c5f9e" stroke-width="14"
+       stroke-linecap="round" stroke-linejoin="round">
+      <rect x="248" y="252" width="304" height="216" rx="22"/>
+      <path d="M318 252 L318 212 L374 212 L374 252"/>
+      <path d="M426 252 L426 212 L482 212 L482 252"/>
+      <g stroke-width="13">
+        <path d="M296 330 L352 330"/>
+        <path d="M448 330 L504 330"/><path d="M476 302 L476 358"/>
+      </g>
+    </g>`,
+
+  Electrical: `
+    <g transform="translate(0, -10)" fill="none" stroke="#2c5f9e" stroke-width="14"
+       stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="400" cy="330" r="152"/>
+      <path d="M436 196 L322 356 L392 356 L364 470 L482 306 L410 306 Z"/>
+    </g>`,
+
+  Suspension: `
+    <g transform="translate(0, -10)" fill="none" stroke="#2c5f9e" stroke-width="14"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M292 198 L508 198"/>
+      <path d="M292 486 L508 486"/>
+      <path d="M316 198 L484 246 L316 294 L484 342 L316 390 L484 438 L316 486"/>
+    </g>`,
+
+  Filters: `
+    <g transform="translate(0, -10)" fill="none" stroke="#2c5f9e" stroke-width="14"
+       stroke-linecap="round" stroke-linejoin="round">
+      <rect x="298" y="228" width="204" height="238" rx="28"/>
+      <g stroke-width="12">
+        <path d="M348 262 L348 432"/>
+        <path d="M400 262 L400 432"/>
+        <path d="M452 262 L452 432"/>
+      </g>
+      <path d="M362 228 L362 196 L438 196 L438 228"/>
+    </g>`,
+
+  Lighting: `
+    <g transform="translate(0, -10)" fill="none" stroke="#2c5f9e" stroke-width="14"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M400 180 Q494 180 494 274 L494 356 Q494 420 400 420 Q306 420 306 356 L306 274 Q306 180 400 180 Z"/>
+      <path d="M348 420 L348 486 L452 486 L452 420"/>
+      <g stroke-width="12">
+        <path d="M356 452 L444 452"/>
+        <path d="M400 240 L400 330"/>
+        <path d="M362 300 L438 300"/>
+      </g>
+    </g>`,
+
+  Wipers: `
+    <g transform="translate(0, -10)" fill="none" stroke="#2c5f9e" stroke-width="14"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M186 468 A268 268 0 0 1 614 468" stroke-dasharray="26 22"/>
+      <path d="M262 392 L538 392" stroke-width="24"/>
+      <path d="M400 392 L400 462"/>
+      <circle cx="400" cy="480" r="22"/>
+    </g>`,
+
+  'Fluids & Chemicals': `
+    <g transform="translate(0, -10)" fill="none" stroke="#2c5f9e" stroke-width="14"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M348 236 L348 196 L452 196 L452 236"/>
+      <path d="M322 236 L478 236 L492 494 Q494 516 472 516 L328 516 Q306 516 308 494 Z"/>
+      <path d="M318 352 L482 352" stroke-width="12"/>
+      <path d="M400 400 L400 462" stroke-width="12"/>
+    </g>`,
+}
+
+/** One SVG per part in the catalogue. */
+function partFiles() {
+  return PARTS.map((part) => ({
+    path: `parts/${part.slug}.svg`,
+    category: 'parts',
+    label: part.name,
+    // Brand and category rather than the price: a price baked into a generated
+    // image goes stale the moment the data changes, and nothing regenerates it.
+    sublabel: `${part.brand} · ${part.category}`,
+    glyph: PART_GLYPHS[part.category],
+  }))
+}
+
+/** One SVG per service in the catalogue, so the cards are distinguishable. */
+function serviceFiles() {
+  return SERVICES.map((service) => ({
+    path: `services/${service.slug}.svg`,
+    category: 'services',
+    label: service.name,
+    sublabel: `${service.duration} · from $${service.startingPrice}`,
+    glyph: SERVICE_GLYPHS[service.icon],
+  }))
+}
+
 /** One SVG per frame of every vehicle's gallery. */
 function vehicleFiles() {
   return VEHICLES.flatMap((vehicle) =>
@@ -201,7 +426,10 @@ function vehicleFiles() {
 }
 
 async function main() {
-  const files = [...STATIC_FILES, ...vehicleFiles()]
+  const vehicles = vehicleFiles()
+  const services = serviceFiles()
+  const parts = partFiles()
+  const files = [...STATIC_FILES, ...services, ...parts, ...vehicles]
 
   for (const file of files) {
     const target = join(OUTPUT_ROOT, file.path)
@@ -209,10 +437,13 @@ async function main() {
     await writeFile(target, svg(file), 'utf8')
   }
 
-  const vehicles = vehicleFiles().length
   console.log(`${files.length} images written to public/images/`)
-  console.log(`  ${STATIC_FILES.length} static, ${vehicles} vehicle gallery frames`)
-  console.log(`  from ${VEHICLES.length} vehicles in src/data/vehicles.js`)
+  console.log(
+    `  ${STATIC_FILES.length} static, ${services.length} services, ${parts.length} parts, ${vehicles.length} vehicle gallery frames`,
+  )
+  console.log(
+    `  from ${VEHICLES.length} vehicles, ${SERVICES.length} services and ${PARTS.length} parts in src/data/`,
+  )
 }
 
 main().catch((error) => {
