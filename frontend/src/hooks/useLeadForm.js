@@ -30,6 +30,19 @@ export default function useLeadForm({ initialValues, validate, onSubmit, success
     )
   }, [])
 
+  /**
+   * Sets a field's error without going through a submit.
+   *
+   * Only the résumé upload uses this, and only because it is the one control
+   * that can be wrong the instant it is touched: a customer who picks a 40 MB
+   * file should hear about it then, not after they have typed a cover letter.
+   * Pass `undefined` to clear. Every other field still validates on submit —
+   * see the note at the top of this file.
+   */
+  const setError = useCallback((name, message) => {
+    setErrors((current) => ({ ...current, [name]: message || undefined }))
+  }, [])
+
   const handleSubmit = useCallback(
     async (event) => {
       event.preventDefault()
@@ -78,6 +91,7 @@ export default function useLeadForm({ initialValues, validate, onSubmit, success
     submitting,
     submitted,
     setField,
+    setError,
     handleSubmit,
     reset,
   }

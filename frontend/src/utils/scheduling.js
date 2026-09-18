@@ -99,6 +99,58 @@ export function isPastSlot(iso, value, now = new Date()) {
   return hour <= now.getHours()
 }
 
+/* -------------------------------------------------------------------------
+ * How busy the diary is.
+ *
+ * The mock has to answer "is this slot taken" in two places that must agree:
+ * the availability response that renders the grid, and `hasBookableSlot`, which
+ * chooses the day the form opens on. When only the first knew about bookings,
+ * a form opened late in the afternoon could land on a day whose every remaining
+ * hour was already taken — nine greyed-out times, and the customer's first job
+ * was to work out they had to pick another day.
+ *
+ * Availability is derived from a hash of the date and time rather than
+ * `Math.random()`. That matters more than it looks: a slot that is free when
+ * the customer opens the form and gone when they look again is exactly the
+ * behaviour that makes people phone instead. The same date always produces the
+ * same diary, and it changes only when the date does.
+ * ---------------------------------------------------------------------- */
+
+/** Weekdays run busier than Saturdays, which is also true of a real shop. */
+const BUSY_PERCENT = { weekday: 34, saturday: 20 }
+
+/** 32-bit FNV-1a. Small, fast, and stable across reloads — which is the whole
+ *  point; `Math.random()` would reshuffle the diary on every render. */
+function hash(value) {
+  let result = 2166136261
+  for (let index = 0; index < value.length; index += 1) {
+    result ^= value.charCodeAt(index)
+    result = Math.imul(result, 16777619)
+  }
+  return result >>> 0
+}
+
+/** Stable per-day busy threshold, so one day is reliably quieter than another. */
+export function busyThreshold(iso) {
+  const date = parseIso(iso)
+  const base = date?.getDay() === 6 ? BUSY_PERCENT.saturday : BUSY_PERCENT.weekday
+  // ±6 points of day-to-day variation.
+  return base + (hash(`day:${iso}`) % 13) - 6
+}
+
+/** A day is fully booked when its own hash lands in a narrow band — rare
+ *  enough to be believable, common enough to be reached in a two-week window
+ *  and give the "nothing left" state something real to render. */
+export function isFullyBooked(iso) {
+  return hash(`full:${iso}`) % 9 === 0
+}
+
+/** True when a specific hour on a date has already been taken by somebody
+ *  else. Takes a date that is already known to be open. */
+export function isSlotTaken(iso, value) {
+  return hash(`${iso} ${value}`) % 100 < busyThreshold(iso)
+}
+
 /**
  * The next `count` days for the picker's day strip.
  *
@@ -134,20 +186,25 @@ export function upcomingDays(count = BOOKING_WINDOW_DAYS, now = new Date()) {
 }
 
 /**
- * True when at least one slot on a date is still in the future.
+ * True when at least one slot on a date can actually be booked.
  *
- * A closed day has no slots and so is never bookable — but so is an *open* day
- * that has already run out of hours, which is what every remaining hour of
- * today becomes by late afternoon. Without this the booking forms opened on a
- * day whose grid was nine greyed-out times reading "Already gone", and the
- * customer's first act was to work out they had to pick another day.
+ * Not merely "still in the future". A closed day has no slots and so is never
+ * bookable — but neither is an *open* day that has already run out of hours,
+ * nor one whose every remaining hour the diary hash has taken. Both are days
+ * the form would otherwise open on, showing a grid of greyed-out times and
+ * leaving the customer to work out that they have to pick another day.
+ *
+ * Blind to how long the job takes; see the note on `nextBookableDay`.
  */
 export function hasBookableSlot(iso, now = new Date()) {
-  return slotsForDate(iso).some((slot) => !isPastSlot(iso, slot.value, now))
+  if (isFullyBooked(iso)) return false
+  return slotsForDate(iso).some(
+    (slot) => !isPastSlot(iso, slot.value, now) && !isSlotTaken(iso, slot.value),
+  )
 }
 
 /** The next day a booking can actually start on, or null within the window.
- *  Skips the days the shop is shut and the days that have no hours left.
+ *  Skips the days the shop is shut and the days with nothing left to book.
  *
  *  Deliberately blind to how long the job takes. A two-hour job late in the
  *  afternoon may still find its last slot "Too late for this job" on the day

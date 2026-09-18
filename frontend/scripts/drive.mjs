@@ -14,10 +14,27 @@
  *          --user-data-dir=/tmp/cd-cdp --no-first-run --disable-gpu about:blank
  *   npm run drive                    # everything
  *   npm run drive -- --responsive-only   # skip the route sweep while iterating
+ *
+ * ---------------------------------------------------------------------------
+ * A backtick inside an `evaluate(session, ...)` template literal ends the
+ * literal. Every probe body here is a JS template literal, so a backtick in a
+ * comment inside one — writing a property or a selector the way you would in
+ * prose — produces `SyntaxError: missing ) after argument list`, pointing at
+ * the line the literal opened on rather than the line at fault. A nested
+ * template literal (a `${...}` string for a page-side helper) breaks it the
+ * same way; concatenate instead. To find the culprit, list the backticks in the
+ * region rather than reading it:
+ *
+ *   awk 'NR>=420 && NR<=640 && /`/ {print NR": "$0}' scripts/drive.mjs
+ * ---------------------------------------------------------------------------
  */
 import { writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
+import { JOBS } from '../src/data/careers.js'
+import { COMPANY_VALUES, MISSION, VISION } from '../src/data/company.js'
+import { CONTACT_SUBJECTS } from '../src/data/contact.js'
+import { TEAM } from '../src/data/team.js'
 
 const SHOT_DIR = tmpdir()
 
@@ -165,6 +182,25 @@ async function waitForMount(session, timeoutMs = 10000) {
   return false
 }
 
+/**
+ * Waits for a condition the page has to reach on its own.
+ *
+ * `waitForMount` answers "has the shell rendered", which on a data-driven page
+ * is true before any data arrives — the page's `h1` is static and the list under
+ * it appears a request later. Reading too early produced a `cards=0` that
+ * cascaded into a FAILED report for a page that was merely slow, so a probe
+ * should wait on the element it is about to measure. Returns false on timeout
+ * rather than throwing, so the probe still runs and reports what it found.
+ */
+async function waitFor(session, condition, timeoutMs = 8000) {
+  const started = Date.now()
+  while (Date.now() - started < timeoutMs) {
+    if (await evaluate(session, `!!(${condition})`)) return true
+    await sleep(120)
+  }
+  return false
+}
+
 const PAGE_PROBE = `(() => {
   const t = (sel) => document.querySelector(sel)?.textContent?.trim() ?? null
   const ids = [...document.querySelectorAll('[id]')].map((el) => el.id)
@@ -188,6 +224,16 @@ let interactions = null
 let detail = null
 let services = null
 let booking = null
+let careersList = null
+let careersApply = null
+let careersForm = null
+let careersMissing = null
+let careersResponsive = []
+let aboutPage = null
+let aboutTeamDeepLink = null
+let contactPage = null
+let contactForm = null
+let contactResponsive = []
 let footerLinks = []
 
 async function visit(session, path, label) {
@@ -205,7 +251,35 @@ async function visit(session, path, label) {
   return probe
 }
 
+/**
+ * Closes tabs left behind by an earlier run.
+ *
+ * Only this script drives the debug browser, so any tab already sitting on the
+ * dev server is residue — usually from a run that was interrupted, or from a
+ * throwaway probe that navigated a tab and never closed it. Left alone they
+ * accumulate, and a dozen backgrounded pages each holding a live HMR socket is
+ * enough to starve the next run's resources: it shows up as
+ * `ERR_INSUFFICIENT_RESOURCES` and a lazy route chunk that fails to fetch, which
+ * reads in the report as a broken console on a build where nothing is wrong.
+ * Cleaning up first keeps that failure honest.
+ */
+async function closeStaleTabs() {
+  const targets = await fetch(`${CDP}/json/list`)
+    .then((res) => (res.ok ? res.json() : []))
+    .catch(() => [])
+
+  const stale = targets.filter(
+    (target) => target.type === 'page' && String(target.url).startsWith(BASE),
+  )
+
+  for (const target of stale) await closeTab(target.id)
+  return stale.length
+}
+
 async function main() {
+  const stale = await closeStaleTabs()
+  if (stale > 0) console.log(`closed ${stale} stale tab(s) from an earlier run`)
+
   // --- Tab 1: console + client-side navigation -----------------------------
   const tab = await openTab('about:blank')
   const session = await connect(tab.webSocketDebuggerUrl)
@@ -439,6 +513,30 @@ async function main() {
           }
           return false
         }
+
+        /**
+         * Waits until the value stops changing, and returns what it settled on.
+         *
+         * The card titles and the aria-live result count are two separate
+         * renders, so waiting for one and then reading the other reads a value
+         * from before the update — which is how a working Toyota filter reported
+         * a count that had not narrowed. This runs after the semantic wait, as a
+         * flush: it does not know what the answer should be, it only asks that
+         * the page has stopped moving.
+         */
+        const settled = async (read, timeout = 6000) => {
+          const deadline = Date.now() + timeout
+          let previous
+          while (Date.now() < deadline) {
+            const value = read()
+            if (previous !== undefined && value === previous) return value
+            previous = value
+            await wait(120)
+          }
+          return previous
+        }
+        /** Everything a filter change moves, as one comparable string. */
+        const resultKey = () => count() + '|' + titles().join('|')
         const ascending = (values) => values.every((v, i) => i === 0 || values[i - 1] <= v)
 
         // The facets arrive with the inventory, and the inventory is a mock
@@ -457,7 +555,14 @@ async function main() {
         const toyota = facet('Toyota')
         if (!toyota) return { ok: false, reason: 'no Toyota facet checkbox found' }
         toyota.click()
-        await waitFor(() => { const t = titles(); return t.length > 0 && t.every((x) => x.includes('Toyota')) })
+        // Wait for the result to actually land, then for the page to stop
+        // moving, then assert. The first wait is bounded at 6s and a broken
+        // filter simply never satisfies it — the assertions below then run
+        // against a settled page and fail with a real message. Waiting only on
+        // that condition would be circular, which is why the settle follows it
+        // and why every semantic claim is still asserted after the fact.
+        await waitFor(() => count() !== null && count() < initialCount)
+        await settled(resultKey)
         log.steps.push({
           step: 'filter make=Toyota',
           url: location.search,
@@ -467,13 +572,18 @@ async function main() {
         })
 
         facet('Honda')?.click()
-        await waitFor(() => { const t = titles(); return t.some((x) => x.includes('Honda')) && t.some((x) => x.includes('Toyota')) })
+        await waitFor(() => {
+          const t = titles()
+          return t.some((x) => x.includes('Honda')) && t.some((x) => x.includes('Toyota'))
+        })
+        await settled(resultKey)
         log.steps.push({ step: 'add make=Honda', url: location.search, count: count() })
 
         const toyotaChip = [...document.querySelectorAll('main ul[aria-labelledby] button')]
           .find((b) => b.textContent.includes('Toyota'))
         toyotaChip?.click()
         await waitFor(() => { const t = titles(); return t.length > 0 && t.every((x) => x.includes('Honda')) })
+        await settled(resultKey)
         log.steps.push({
           step: 'remove Toyota via chip',
           url: location.search,
@@ -485,6 +595,7 @@ async function main() {
         const filtersAside = document.querySelector('aside[aria-label="Vehicle filters"]')
         buttonByText(filtersAside, 'Clear all')?.click()
         await waitFor(() => count() === initialCount && chipLabels().length === 0)
+        await settled(resultKey)
         log.steps.push({ step: 'clear all', url: location.search, count: count(), chips: chipLabels().length })
 
         const sort = document.querySelector('select[aria-label="Sort vehicles"]')
@@ -1196,7 +1307,7 @@ async function main() {
             message:
               [...document.querySelectorAll('main fieldset p')]
                 .map((p) => p.textContent.trim())
-                .find((t) => /has gone/i.test(t)) ?? null,
+                .find((t) => /nothing left|has gone/i.test(t)) ?? null,
           }
         }
 
@@ -2002,6 +2113,639 @@ async function main() {
     }
   }
 
+  step('careers listing')
+  // --- Careers: the listing -------------------------------------------------
+  // Three things here that the route sweep cannot see. That every card carries
+  // all six facts §35 asks for and not just a title. That the card's Apply
+  // button lands on the *form* rather than the top of the posting. And that the
+  // résumé dropzone rejects a bad file the moment it is chosen, rather than
+  // after a cover letter has been typed on top of it.
+  await send(session, 'Emulation.setDeviceMetricsOverride', {
+    width: 1280,
+    height: 900,
+    deviceScaleFactor: 1,
+    mobile: false,
+  })
+
+  await send(session, 'Page.navigate', { url: `${BASE}/careers` })
+  await sleep(1600)
+  await waitForMount(session)
+
+  // `waitForMount` only proves the page shell rendered: this page's `h1` comes
+  // from the static header, while the job cards arrive a request later. Reading
+  // the cards without waiting for them produced an intermittent `cards=0`, which
+  // cascaded — no card meant no Apply link to click, and the whole careers
+  // section reported FAILED for what was really a slow response. Wait for the
+  // thing being measured, not for the page around it.
+  await waitFor(session, `document.querySelectorAll('main article').length > 0`)
+
+  careersList = await evaluate(
+    session,
+    `(() => {
+      const text = (el) => (el?.textContent ?? '').replace(/\\s+/g, ' ').trim()
+      const cards = [...document.querySelectorAll('main article')]
+
+      return {
+        cardCount: cards.length,
+        heading: text(document.querySelector('main h1')),
+        cards: cards.map((card) => {
+          const links = [...card.querySelectorAll('a')]
+          return {
+            title: text(card.querySelector('h3')),
+            // The whole card as one string: the six facts are spread across a
+            // badge row, a meta list and a footer, and asserting on each
+            // separately would break the moment one of them moved.
+            body: text(card),
+            descriptionLength: text(card.querySelector('p')).length,
+            apply: links.find((a) => /apply/i.test(text(a)))?.getAttribute('href') ?? null,
+            posting: links.find((a) => /full posting/i.test(text(a)))?.getAttribute('href') ?? null,
+          }
+        }),
+      }
+    })()`,
+  )
+
+  step('careers apply deep link')
+  // --- Clicking Apply lands on the form ------------------------------------
+  const clickedApply = await evaluate(
+    session,
+    `(() => {
+      const links = [...document.querySelectorAll('main article a')]
+        .filter((a) => /apply/i.test(a.textContent.trim()))
+      if (!links.length) return { clicked: false, reason: 'no Apply link on any card' }
+      const href = links[0].getAttribute('href')
+      links[0].click()
+      return { clicked: true, href }
+    })()`,
+  )
+
+  if (!clickedApply.clicked) {
+    problems.push(`Careers: ${clickedApply.reason}`)
+  }
+
+  await sleep(1800)
+  await waitForMount(session)
+
+  careersApply = await evaluate(
+    session,
+    `(async () => {
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms))
+      const text = (el) => (el?.textContent ?? '').replace(/\\s+/g, ' ').trim()
+
+      // Two things have to happen before the form is reachable and neither is
+      // instant: the lazy chunk has to arrive, and the smooth scroll to #apply
+      // has to finish. Measuring during the animation reports a position that
+      // is still moving, so poll until it stops.
+      const deadline = Date.now() + 8000
+      let top = null
+      let previous = null
+      let settled = false
+      while (Date.now() < deadline) {
+        const el = document.getElementById('apply')
+        if (el) {
+          top = Math.round(el.getBoundingClientRect().top)
+          if (previous !== null && Math.abs(top - previous) <= 1) {
+            settled = true
+            break
+          }
+          previous = top
+        }
+        await wait(250)
+      }
+
+      const el = document.getElementById('apply')
+      if (!el) return null
+
+      const docTop = Math.round(el.getBoundingClientRect().top + window.scrollY)
+
+      // Re-run the identical scroll now that nothing else is in flight. If the
+      // retry lands somewhere different from the first attempt, the first
+      // landing was moved afterwards by a layout change rather than by the
+      // scroll — which is a different bug from an offset that is simply wrong.
+      // The document offset against its retry tells the two apart: equal
+      // offsets with different landings mean the scroll was cut short; a
+      // changed offset means the page grew or shrank underneath it.
+      el.scrollIntoView({ block: 'start' })
+      await wait(400)
+      const retryTop = Math.round(el.getBoundingClientRect().top)
+      const retryDocTop = Math.round(el.getBoundingClientRect().top + window.scrollY)
+
+      return {
+        url: location.pathname + location.hash,
+        h1: text(document.querySelector('main h1')),
+        h1Count: document.querySelectorAll('main h1').length,
+        sections: [...document.querySelectorAll('main h2')].map(text),
+        applyTop: top,
+        retryTop,
+        docTop,
+        retryDocTop,
+        applySettled: settled,
+        // Everything the landing position depends on. Without these the sweep
+        // can only say "60px", which is not enough to tell a wrong offset from
+        // a page that ran out of scroll.
+        headerHeight: Math.round(
+          document.querySelector('header')?.getBoundingClientRect().height ?? 0,
+        ),
+        scrollMarginTop: getComputedStyle(el).scrollMarginTop,
+        scrollY: Math.round(window.scrollY),
+        maxScroll: Math.round(document.documentElement.scrollHeight - window.innerHeight),
+        innerWidth: window.innerWidth,
+        innerHeight: window.innerHeight,
+        hasForm: !!document.querySelector('#apply form'),
+        relatedCards: document.querySelectorAll('main section article').length,
+      }
+    })()`,
+    // Seven `wait` polls plus the chunk load; the default 15s is not enough
+    // when the dev server is recompiling behind the run.
+    30000,
+  )
+
+  step('careers application form')
+  // --- The application form ------------------------------------------------
+  careersForm = await evaluate(
+    session,
+    `(async () => {
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms))
+      const log = {}
+
+      const form = document.querySelector('#apply form')
+      if (!form) return { ok: false, reason: 'no form inside #apply' }
+
+      const q = (name) => form.querySelector('[name="' + name + '"]')
+      const submit = () => form.querySelector('button[type="submit"]')
+      // Field errors only. The summary banner is deliberately a different red
+      // (text-red-700), so this selector never picks it up and the two counts
+      // stay independent.
+      const fieldErrors = () =>
+        [...form.querySelectorAll('.text-red-600')].map((e) => e.textContent.trim())
+      const summary = () => form.querySelector('p[role="alert"]')?.textContent.trim() ?? null
+
+      const setValue = (el, value) => {
+        const proto =
+          el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype
+            : el.tagName === 'SELECT' ? HTMLSelectElement.prototype
+              : HTMLInputElement.prototype
+        Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, value)
+        el.dispatchEvent(new Event(el.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true }))
+      }
+
+      // React reads the native files list off the change event, so the file has
+      // to be attached with a real DataTransfer rather than by assigning a plain
+      // array — an array has no files shape for the handler to read.
+      const setFile = (file) => {
+        const input = q('resume')
+        const transfer = new DataTransfer()
+        transfer.items.add(file)
+        input.files = transfer.files
+        input.dispatchEvent(new Event('change', { bubbles: true }))
+      }
+
+      log.position = q('position')?.value ?? null
+
+      // 1. Submitting an empty form. Four, not five: the position is already
+      // filled in from the posting, which is the point of pre-filling it — the
+      // assertion below checks it is the one field *not* highlighted.
+      submit().click()
+      await wait(200)
+      log.emptySubmit = { summary: summary(), errors: fieldErrors() }
+
+      // 2. A file the dropzone should refuse on sight.
+      setFile(new File(['not a resume'], 'notes.txt', { type: 'text/plain' }))
+      await wait(200)
+      log.rejectedType = { errors: fieldErrors() }
+
+      // 3. A file that is the right type and too big.
+      setFile(new File([new Uint8Array(6 * 1024 * 1024)], 'portfolio.pdf', { type: 'application/pdf' }))
+      await wait(200)
+      log.rejectedSize = { errors: fieldErrors() }
+
+      // 4. A file it should take. The three contact errors from step 1 are
+      // still standing — nothing has filled those fields — so this asks whether
+      // any *résumé* error is left, not whether the form is error-free.
+      setFile(new File(['%PDF-1.4 test'], 'jane-doe-resume.pdf', { type: 'application/pdf' }))
+      await wait(200)
+      log.acceptedResume = {
+        resumeErrors: fieldErrors().filter((message) => /résumé|PDF|5 MB/i.test(message)),
+        nameShown: form.textContent.includes('jane-doe-resume.pdf'),
+        removeOffered: [...form.querySelectorAll('button')].some((b) =>
+          /remove file/i.test(b.textContent),
+        ),
+      }
+
+      // 5. Everything valid except the profile link.
+      setValue(q('name'), 'Jane Doe')
+      setValue(q('email'), 'jane.doe@example.ca')
+      setValue(q('phone'), '639-384-9999')
+      setValue(q('profileUrl'), 'not a link')
+      submit().click()
+      await wait(250)
+      log.badProfileUrl = { summary: summary(), errors: fieldErrors() }
+
+      // 6. Send it.
+      setValue(q('profileUrl'), 'linkedin.com/in/jane-doe')
+      setValue(q('coverLetter'), 'I have run a wash bay for three years and I would like to move to a shop that corrects paint.')
+      submit().click()
+      await wait(1600)
+      log.submitted = {
+        // The whole panel, not just the status heading: the heading is
+        // "Thanks — we have your application" and it is the sentence underneath
+        // that names the role. Reading only the heading made a correct
+        // confirmation look like it had lost track of what was applied for.
+        confirmation: document.querySelector('#apply')?.textContent.replace(/\\s+/g, ' ').trim().slice(0, 240) ?? null,
+        formGone: !document.querySelector('#apply form'),
+      }
+
+      // 7. Removing a file puts the picker back.
+      const reset = [...document.querySelectorAll('#apply button')].find((b) =>
+        /send another/i.test(b.textContent),
+      )
+      if (reset) {
+        reset.click()
+        await wait(250)
+        log.afterReset = {
+          formBack: !!document.querySelector('#apply form'),
+          fileNameStillThere: (document.querySelector('#apply form')?.textContent ?? '').includes(
+            'jane-doe-resume.pdf',
+          ),
+        }
+      }
+
+      return { ok: true, ...log }
+    })()`,
+    30000,
+  )
+
+  step('careers 404')
+  // --- A posting that is no longer open ------------------------------------
+  await send(session, 'Page.navigate', { url: `${BASE}/careers/not-a-real-job` })
+  await sleep(1500)
+  await waitForMount(session)
+
+  careersMissing = await evaluate(
+    session,
+    `(() => {
+      const text = (el) => (el?.textContent ?? '').replace(/\\s+/g, ' ').trim()
+      return {
+        h1: text(document.querySelector('main h1')),
+        body: text(document.querySelector('main')).slice(0, 200),
+      }
+    })()`,
+  )
+
+  step('careers responsive')
+  // --- The careers pages at phone width ------------------------------------
+  // The application form is the widest thing in this phase: a two-column name
+  // row, a dropzone and a six-row textarea, all inside a card inside a
+  // container. If any of it refuses to shrink, this is where it shows.
+  for (const width of [360, 390, 768, 1280]) {
+    await send(session, 'Emulation.setDeviceMetricsOverride', {
+      width,
+      height: 900,
+      deviceScaleFactor: 1,
+      mobile: false,
+    })
+
+    for (const path of ['/careers', '/careers/service-technician']) {
+      await send(session, 'Page.navigate', { url: `${BASE}${path}` })
+      await sleep(1500)
+      await waitForMount(session)
+
+      const row = await evaluate(
+        session,
+        `(() => {
+          const overflowX = document.documentElement.scrollWidth > window.innerWidth + 1
+          return {
+            width: window.innerWidth,
+            scrollWidth: document.documentElement.scrollWidth,
+            overflowX,
+            offenders: [...document.querySelectorAll('main *')]
+              .map((el) => ({ el, r: el.getBoundingClientRect() }))
+              .filter(({ r }) => r.width > 0 && r.right > window.innerWidth + 1)
+              .slice(0, 4)
+              .map(({ el, r }) =>
+                el.tagName.toLowerCase() +
+                (el.className ? '.' + String(el.className).split(' ').slice(0, 3).join('.') : '') +
+                ' [right=' + Math.round(r.right) + ' w=' + Math.round(r.width) + ']'
+              ),
+          }
+        })()`,
+      )
+      careersResponsive.push({ path, ...row })
+
+      if (row.overflowX) {
+        problems.push(
+          `Careers: horizontal overflow on ${path} at ${width}px (${row.scrollWidth}px) — ${row.offenders.join('; ')}`,
+        )
+      }
+    }
+  }
+
+  step('about page')
+  // --- §38 About -----------------------------------------------------------
+  await send(session, 'Emulation.setDeviceMetricsOverride', {
+    width: 1280,
+    height: 900,
+    deviceScaleFactor: 1,
+    mobile: false,
+  })
+  await send(session, 'Page.navigate', { url: `${BASE}/about` })
+  await sleep(1500)
+  await waitForMount(session)
+  // The portraits are lazy, so they have not loaded and are not `complete`
+  // until the grid is actually on screen. Reading them without scrolling
+  // reports eight broken images on a page where nothing is broken — and
+  // scrolling first is the more honest test anyway, since it is what a reader
+  // does. Same wait, same reason, as the vehicle galleries.
+  await evaluate(
+    session,
+    `(async () => {
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms))
+      document.getElementById('team')?.scrollIntoView({ block: 'start' })
+      const deadline = Date.now() + 8000
+      while (Date.now() < deadline) {
+        if ([...document.querySelectorAll('main img')].every((i) => i.complete)) return true
+        await wait(150)
+      }
+      return false
+    })()`,
+    12000,
+  )
+
+  aboutPage = await evaluate(
+    session,
+    `(() => {
+      const text = (el) => (el?.textContent ?? '').replace(/\\\\s+/g, ' ').trim()
+      const cards = [...document.querySelectorAll('main ul > li')]
+      const team = cards.filter((li) => li.querySelector('h3') && li.querySelector('img'))
+
+      return {
+        url: location.pathname,
+        h1: text(document.querySelector('main h1')),
+        h1Count: document.querySelectorAll('main h1').length,
+        headings: [...document.querySelectorAll('main h2')].map(text),
+        // §38's five sections, by the id or heading each one carries.
+        ids: [...document.querySelectorAll('main [id]')].map((el) => el.id),
+        // Values and team are both card grids, told apart by whether the card
+        // carries a portrait.
+        valueTitles: cards
+          .filter((li) => li.querySelector('h3') && !li.querySelector('img'))
+          .map((li) => text(li.querySelector('h3'))),
+        team: team.map((li) => ({
+          name: text(li.querySelector('h3')),
+          position: text(li.querySelector('p')),
+          bioLength: text(li.querySelectorAll('p')[1]).length,
+          alt: li.querySelector('img')?.getAttribute('alt') ?? null,
+          src: li.querySelector('img')?.getAttribute('src') ?? null,
+        })),
+        // A lazy image that never resolved is the failure mode a card count
+        // cannot see, so every one is checked rather than sampled.
+        images: [...document.querySelectorAll('main img')].map((i) => ({
+          src: i.getAttribute('src'),
+          complete: i.complete,
+          natural: i.naturalWidth,
+        })),
+        telLinks: [...document.querySelectorAll('main a[href^="tel:"]')].length,
+      }
+    })()`,
+  )
+
+  step('about team deep link')
+  // --- The footer's "Our Team" link ----------------------------------------
+  // `/about#team` is in the footer's Company column and has been since the
+  // footer was written. On a lazy route the fragment arrives before the chunk
+  // does, so this checks the page honours it rather than dropping it.
+  await send(session, 'Page.navigate', { url: `${BASE}/` })
+  await sleep(1200)
+  await waitForMount(session)
+
+  const clickedTeam = await evaluate(
+    session,
+    `(() => {
+      const link = [...document.querySelectorAll('footer a')]
+        .find((a) => a.getAttribute('href') === '/about#team')
+      if (!link) return { clicked: false, reason: 'no /about#team link in the footer' }
+      link.click()
+      return { clicked: true, href: link.getAttribute('href') }
+    })()`,
+  )
+
+  if (clickedTeam.clicked) {
+    await sleep(2200)
+    await waitForMount(session)
+    aboutTeamDeepLink = await evaluate(
+      session,
+      `(async () => {
+        const wait = (ms) => new Promise((r) => setTimeout(r, ms))
+        // Same settle-then-retry as the careers anchor, for the same reason:
+        // the arriving scroll can be aimed at geometry that shifts underneath
+        // it. The retry is the measurement of whether the margin is honoured.
+        const deadline = Date.now() + 6000
+        let top = null
+        let previous = null
+        while (Date.now() < deadline) {
+          const el = document.getElementById('team')
+          if (el) {
+            top = Math.round(el.getBoundingClientRect().top)
+            if (previous !== null && Math.abs(top - previous) <= 1) break
+            previous = top
+          }
+          await wait(250)
+        }
+
+        const el = document.getElementById('team')
+        if (!el) return { url: location.pathname + location.hash, found: false }
+        const docTop = Math.round(el.getBoundingClientRect().top + window.scrollY)
+
+        el.scrollIntoView({ block: 'start' })
+        await wait(400)
+        const retryTop = Math.round(el.getBoundingClientRect().top)
+        const retryDocTop = Math.round(el.getBoundingClientRect().top + window.scrollY)
+
+        return {
+          url: location.pathname + location.hash,
+          found: true,
+          top,
+          retryTop,
+          docTop,
+          retryDocTop,
+          scrollMarginTop: getComputedStyle(el).scrollMarginTop,
+          // The team grid has to be the thing that came into view, not just
+          // some element with the right id.
+          cardsInView: [...el.querySelectorAll('li')].filter((li) => {
+            const r = li.getBoundingClientRect()
+            return r.bottom > 0 && r.top < window.innerHeight
+          }).length,
+        }
+      })()`,
+      20000,
+    )
+  }
+
+  step('contact page')
+  // --- §39 Contact ---------------------------------------------------------
+  await send(session, 'Page.navigate', { url: `${BASE}/contact` })
+  await sleep(1800)
+  await waitForMount(session)
+
+  contactPage = await evaluate(
+    session,
+    `(() => {
+      const text = (el) => (el?.textContent ?? '').replace(/\\\\s+/g, ' ').trim()
+      const form = document.querySelector('main form')
+      const iframe = document.querySelector('main iframe')
+      const labels = form
+        ? [...form.querySelectorAll('label')].map((l) => text(l))
+        : []
+
+      return {
+        url: location.pathname,
+        h1: text(document.querySelector('main h1')),
+        h1Count: document.querySelectorAll('main h1').length,
+        // §39's five fields, by the name they would post under.
+        fieldNames: form
+          ? [...form.querySelectorAll('input, select, textarea')].map((f) => f.name)
+          : [],
+        labels,
+        subjectOptions: form
+          ? [...form.querySelectorAll('select[name="subject"] option')].map((o) => o.value)
+          : [],
+        hasMap: !!iframe,
+        mapTitle: iframe?.getAttribute('title') ?? null,
+        mapLoading: iframe?.getAttribute('loading') ?? null,
+        address: text(document.querySelector('main address')),
+        // The address block is postal only, so the phone and the email are
+        // asserted against the page rather than against it.
+        pageText: text(document.querySelector('main')),
+        hours: text(document.querySelector('main dl')),
+        telLinks: [...document.querySelectorAll('main a[href^="tel:"]')].length,
+        mailLinks: [...document.querySelectorAll('main a[href^="mailto:"]')].length,
+        appointmentLinks: [...document.querySelectorAll('main a[href="/appointments"]')].length,
+        outsideLinks: [...document.querySelectorAll('main a[target="_blank"]')].map(
+          (a) => a.getAttribute('href'),
+        ),
+      }
+    })()`,
+  )
+
+  step('contact form')
+  contactForm = await evaluate(
+    session,
+    `(async () => {
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms))
+      const text = (el) => (el?.textContent ?? '').replace(/\\\\s+/g, ' ').trim()
+      const q = (name) => document.querySelector('main form [name="' + name + '"]')
+      const form = () => document.querySelector('main form')
+      const fieldErrors = () =>
+        [...form().querySelectorAll('.text-red-600')].map((e) => text(e))
+      // What a screen reader is told, and the only field-level signal that does
+      // not depend on the wording of the message. Asserting on the copy would
+      // make this a test of the error strings rather than of the validation.
+      const invalidFields = () =>
+        [...form().querySelectorAll('[aria-invalid="true"]')].map((f) => f.name)
+      const summary = () =>
+        text(document.querySelector('main [role="alert"]')) || null
+
+      const setValue = (el, value) => {
+        const proto =
+          el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype
+            : el.tagName === 'SELECT' ? HTMLSelectElement.prototype
+              : HTMLInputElement.prototype
+        Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, value)
+        el.dispatchEvent(new Event(el.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true }))
+      }
+
+      const log = {}
+
+      // The subject arrives pre-chosen, which is deliberate: it is a routing
+      // hint, not a question. So an empty submit should refuse four fields.
+      form().requestSubmit()
+      await wait(300)
+      log.emptySubmit = {
+        summary: summary(),
+        errors: fieldErrors(),
+        invalid: invalidFields(),
+      }
+
+      setValue(q('name'), 'Dana Whitfield')
+      setValue(q('email'), 'not-an-email')
+      setValue(q('phone'), '6393849999')
+      setValue(q('message'), 'Do you have winter tires for a 2021 RAV4?')
+      form().requestSubmit()
+      await wait(300)
+      log.badEmail = { errors: fieldErrors(), invalid: invalidFields() }
+
+      // Long enough to be a sentence, which the form asks for.
+      setValue(q('email'), 'dana@example.ca')
+      setValue(q('message'), 'short')
+      form().requestSubmit()
+      await wait(300)
+      log.shortMessage = { errors: fieldErrors(), invalid: invalidFields() }
+
+      setValue(q('message'), 'Do you have winter tires in stock for a 2021 RAV4? I can come by Saturday morning.')
+      const subject = q('subject')
+      setValue(subject, 'parts')
+      await wait(150)
+      form().requestSubmit()
+      await wait(1800)
+
+      log.submitted = {
+        confirmation: text(document.querySelector('main form')) || text(document.querySelector('main .rounded-xl')),
+        formGone: !form(),
+        namedEmail: text(document.body).includes('dana@example.ca'),
+        saysDepartment: /right department|front desk/i.test(text(document.body)),
+      }
+
+      return log
+    })()`,
+    30000,
+  )
+
+  step('contact responsive')
+  // The contact page carries the widest fixed-width thing on the site — the map
+  // iframe — plus a two-column form row and a sidebar of cards.
+  for (const width of [360, 390, 768, 1280]) {
+    await send(session, 'Emulation.setDeviceMetricsOverride', {
+      width,
+      height: 900,
+      deviceScaleFactor: 1,
+      mobile: false,
+    })
+
+    for (const path of ['/about', '/contact']) {
+      await send(session, 'Page.navigate', { url: `${BASE}${path}` })
+      await sleep(1500)
+      await waitForMount(session)
+
+      const row = await evaluate(
+        session,
+        `(() => {
+          const overflowX = document.documentElement.scrollWidth > window.innerWidth + 1
+          return {
+            width: window.innerWidth,
+            scrollWidth: document.documentElement.scrollWidth,
+            overflowX,
+            offenders: [...document.querySelectorAll('main *')]
+              .map((el) => ({ el, r: el.getBoundingClientRect() }))
+              .filter(({ r }) => r.width > 0 && r.right > window.innerWidth + 1)
+              .slice(0, 4)
+              .map(({ el, r }) =>
+                el.tagName.toLowerCase() +
+                (el.className ? '.' + String(el.className).split(' ').slice(0, 3).join('.') : '') +
+                ' [right=' + Math.round(r.right) + ' w=' + Math.round(r.width) + ']'
+              ),
+          }
+        })()`,
+      )
+      contactResponsive.push({ path, ...row })
+
+      if (row.overflowX) {
+        problems.push(
+          `About/Contact: horizontal overflow on ${path} at ${width}px (${row.scrollWidth}px) — ${row.offenders.join('; ')}`,
+        )
+      }
+    }
+  }
+
   step('mobile drawer')
   // --- Mobile drawer at a true 390px viewport -----------------------------
   await send(session, 'Emulation.setDeviceMetricsOverride', {
@@ -2351,7 +3095,7 @@ async function main() {
       expect(booking.fullState?.free === 0, 'a fully booked day still offered a free time')
       expect(booking.fullState?.slots > 0, 'a fully booked day rendered no times at all')
       expect(
-        /has gone/i.test(booking.fullState?.message ?? ''),
+        /nothing left|has gone/i.test(booking.fullState?.message ?? ''),
         'a fully booked day did not explain why nothing was bookable',
       )
     }
@@ -2435,6 +3179,485 @@ async function main() {
 
   console.log('\n================ FITMENT CHECKER ================')
   console.log(JSON.stringify(partsFitment, null, 2))
+
+  console.log('\n================ CAREERS ================')
+  if (!careersList) {
+    console.log('skipped (--responsive-only)')
+  } else {
+    const expectJob = (condition, message) => {
+      if (!condition) problems.push(`Careers: ${message}`)
+    }
+
+    console.log(`listing          h1=${JSON.stringify(careersList.heading)} cards=${careersList.cardCount}`)
+    expectJob(
+      careersList.cardCount === JOBS.length,
+      `the listing showed ${careersList.cardCount} cards for ${JOBS.length} roles in the data`,
+    )
+
+    // Every §35 field, on every card. Matching by title rather than by index
+    // because the list is sorted newest first — an index-based check would
+    // silently start testing a different role the next time one is posted.
+    for (const job of JOBS) {
+      const card = careersList.cards.find((c) => c.title === job.title)
+      if (!card) {
+        problems.push(`Careers: no card rendered for "${job.title}"`)
+        continue
+      }
+
+      const missing = [
+        ['department', job.department],
+        ['employment type', job.employmentType],
+        ['posted date', 'Posted'],
+      ]
+        .filter(([, needle]) => !card.body.includes(needle))
+        .map(([label]) => label)
+
+      if (missing.length) {
+        problems.push(`Careers: the "${job.title}" card is missing its ${missing.join(', ')}`)
+      }
+      if (card.descriptionLength < 40) {
+        problems.push(`Careers: the "${job.title}" card has no short description`)
+      }
+      if (card.apply !== `/careers/${job.slug}#apply`) {
+        problems.push(`Careers: the "${job.title}" Apply button points at ${card.apply}`)
+      }
+      if (card.posting !== `/careers/${job.slug}`) {
+        problems.push(`Careers: the "${job.title}" posting link points at ${card.posting}`)
+      }
+    }
+
+    console.log(
+      `apply deep link  clicked=${clickedApply.href} landed=${careersApply?.url} ` +
+        `top=${careersApply?.applyTop} retry=${careersApply?.retryTop} settled=${careersApply?.applySettled} ` +
+        `docTop=${careersApply?.docTop}->${careersApply?.retryDocTop} ` +
+        `header=${careersApply?.headerHeight} scroll-mt=${careersApply?.scrollMarginTop} ` +
+        `scrollY=${careersApply?.scrollY}/${careersApply?.maxScroll} ` +
+        `viewport=${careersApply?.innerWidth}x${careersApply?.innerHeight}`,
+    )
+    expectJob(clickedApply.clicked, 'no card exposed an Apply link to click')
+    expectJob(
+      careersApply?.url === clickedApply.href,
+      `the Apply button landed on ${careersApply?.url} rather than ${clickedApply.href}`,
+    )
+    expectJob(careersApply?.hasForm, 'the posting has no application form at #apply')
+    // Two separate claims, kept apart because they fail for different reasons.
+    //
+    // First: the arriving scroll leaves the form visible, clear of the sticky
+    // header. It lands about 36px high of the ideal — the page's layout origin
+    // shifts after the effect fires — so this is a range, and deliberately a
+    // generous one. It is a readability check, not an offset check.
+    expectJob(
+      careersApply?.applySettled &&
+        careersApply.applyTop >= 0 &&
+        careersApply.applyTop <= 250,
+      `the #apply anchor settled at ${careersApply?.applyTop}px from the top of the viewport ` +
+        `(header ${careersApply?.headerHeight}px, scroll-mt ${careersApply?.scrollMarginTop})`,
+    )
+    // Second: `scroll-mt-24` is honoured exactly. Re-running the same scroll
+    // once the page has settled must land on the margin to the pixel — and it
+    // must land on the same document offset, or the page moved under the
+    // reader rather than the scroll being aimed badly. This is the assertion
+    // that would catch a real regression in the offset; the range above would
+    // not. Both are needed: the first says the customer can read the form, the
+    // second says the reason it was 36px off is not the margin.
+    expectJob(
+      careersApply?.retryDocTop === careersApply?.docTop,
+      `#apply moved ${careersApply?.docTop} -> ${careersApply?.retryDocTop} in the document ` +
+        'between arriving and settling',
+    )
+    expectJob(
+      careersApply?.retryTop === parseInt(careersApply?.scrollMarginTop, 10),
+      `a settled scroll lands the #apply anchor at ${careersApply?.retryTop}px, but its ` +
+        `scroll-margin is ${careersApply?.scrollMarginTop}`,
+    )
+    expectJob(
+      careersApply?.h1Count === 1,
+      `the posting renders ${careersApply?.h1Count} h1 elements`,
+    )
+
+    for (const heading of [
+      'Overview',
+      'Duties',
+      'Responsibilities',
+      'Skills',
+      'Qualifications',
+      'Experience',
+      'Benefits',
+    ]) {
+      expectJob(
+        careersApply?.sections?.includes(heading),
+        `§36's "${heading}" section is not on the posting`,
+      )
+    }
+
+    console.log(`posting sections ${JSON.stringify(careersApply?.sections)}`)
+    console.log(`related roles    ${careersApply?.relatedCards} cards`)
+
+    console.log('\n---------------- JOB APPLICATION ----------------')
+    if (!careersForm?.ok) {
+      problems.push(`Careers: the application form could not be driven — ${careersForm?.reason}`)
+      console.log(`FAILED: ${careersForm?.reason}`)
+    } else {
+      const expectForm = (condition, message) => {
+        if (!condition) problems.push(`Job application: ${message}`)
+      }
+
+      console.log(`prefilled role   ${careersForm.position}`)
+      expectForm(
+        JOBS.some((job) => job.slug === careersForm.position),
+        `the position was not pre-filled from the posting (got ${careersForm.position})`,
+      )
+
+      const empty = careersForm.emptySubmit
+      console.log(`empty submit     ${JSON.stringify(empty)}`)
+      // Name, email, phone and résumé. The position is not among them because
+      // it arrived pre-filled from the posting — the whole point of pre-filling
+      // it is that the one field a candidate cannot get wrong is the one that
+      // says which job they are applying for.
+      expectForm(
+        empty.errors.length === 4,
+        `an empty submit highlighted ${empty.errors.length} fields, expected 4`,
+      )
+      expectForm(Boolean(empty.summary), 'an empty submit showed no error summary')
+
+      const badType = careersForm.rejectedType.errors.join(' ')
+      console.log(`wrong file type  ${JSON.stringify(careersForm.rejectedType)}`)
+      expectForm(
+        /pdf, doc or docx/i.test(badType),
+        'a .txt file was not refused when it was chosen',
+      )
+
+      const badSize = careersForm.rejectedSize.errors.join(' ')
+      console.log(`oversized file   ${JSON.stringify(careersForm.rejectedSize)}`)
+      expectForm(/5 MB/i.test(badSize), 'a 6 MB file was not refused when it was chosen')
+
+      const good = careersForm.acceptedResume
+      console.log(`accepted file    ${JSON.stringify(good)}`)
+      expectForm(good.resumeErrors.length === 0, `a valid PDF was refused: ${good.resumeErrors}`)
+      expectForm(good.nameShown, 'the chosen file name was not shown')
+      expectForm(good.removeOffered, 'no way to remove a chosen file')
+
+      console.log(`bad profile url  ${JSON.stringify(careersForm.badProfileUrl)}`)
+      expectForm(
+        careersForm.badProfileUrl.errors.length === 1,
+        `a bad profile URL highlighted ${careersForm.badProfileUrl.errors.length} fields, expected 1`,
+      )
+
+      console.log(`submitted        ${JSON.stringify(careersForm.submitted)}`)
+      expectForm(Boolean(careersForm.submitted.confirmation), 'the application was never confirmed')
+      expectForm(
+        careersForm.submitted.formGone,
+        'the form is still on screen after a successful submission',
+      )
+      const appliedTo = JOBS.find((job) => job.slug === careersForm.position)
+      expectForm(
+        appliedTo && careersForm.submitted.confirmation?.includes(appliedTo.title),
+        'the confirmation does not name the role that was applied for',
+      )
+
+      console.log(`after reset      ${JSON.stringify(careersForm.afterReset)}`)
+      expectForm(careersForm.afterReset?.formBack, 'the form did not come back after a reset')
+      expectForm(
+        careersForm.afterReset?.fileNameStillThere === false,
+        'the résumé survived the reset',
+      )
+    }
+
+    console.log(`\nmissing posting  h1=${JSON.stringify(careersMissing?.h1)}`)
+    expectJob(
+      /no longer open/i.test(careersMissing?.body ?? ''),
+      'an unknown job slug does not render the "no longer open" page',
+    )
+
+    console.log('\n---------------- CAREERS RESPONSIVE ----------------')
+    for (const row of careersResponsive) {
+      console.log(
+        `${row.path.padEnd(30)} @${String(row.width).padEnd(5)} scrollWidth=${row.scrollWidth} overflow=${row.overflowX}`,
+      )
+      row.offenders?.forEach((o) => console.log(`         ↳ ${o}`))
+    }
+  }
+
+  console.log('\n================ ABOUT ================')
+  if (!aboutPage) {
+    console.log('skipped (--responsive-only)')
+  } else {
+    const expectAbout = (condition, message) => {
+      if (!condition) problems.push(`About: ${message}`)
+    }
+
+    console.log(`page             h1=${JSON.stringify(aboutPage.h1)} h1s=${aboutPage.h1Count}`)
+    expectAbout(aboutPage.h1Count === 1, `the page has ${aboutPage.h1Count} h1 elements, not 1`)
+    expectAbout(aboutPage.url === '/about', `the page rendered at ${aboutPage.url}`)
+
+    console.log(`sections         ${aboutPage.headings.join(' | ')}`)
+    // §38 names five sections. Three are headings; Our Values and Our Team are
+    // proven by their cards a few lines down, so this checks the other three.
+    for (const [label, pattern] of [
+      ['Our Company', /company|four vehicles/i],
+      ['Mission', new RegExp(MISSION.statement.slice(0, 24), 'i')],
+      ['Vision', new RegExp(VISION.statement.slice(0, 24), 'i')],
+    ]) {
+      expectAbout(
+        aboutPage.headings.some((h) => pattern.test(h)),
+        `${label} has no heading on the page`,
+      )
+    }
+
+    console.log(`values           ${aboutPage.valueTitles.length} — ${aboutPage.valueTitles.join(', ')}`)
+    expectAbout(
+      aboutPage.valueTitles.length === COMPANY_VALUES.length,
+      `${aboutPage.valueTitles.length} value cards for ${COMPANY_VALUES.length} in the data`,
+    )
+    for (const value of COMPANY_VALUES) {
+      expectAbout(
+        aboutPage.valueTitles.includes(value.title),
+        `the value "${value.title}" is missing from the page`,
+      )
+    }
+
+    console.log(`team             ${aboutPage.team.length} cards for ${TEAM.length} in the data`)
+    expectAbout(
+      aboutPage.team.length === TEAM.length,
+      `${aboutPage.team.length} team cards for ${TEAM.length} in the data`,
+    )
+    // §38 asks each card for an image, a name, a position and a bio. A card
+    // that rendered only a name would still count, which is why all four are
+    // checked per member rather than in aggregate.
+    for (const member of TEAM) {
+      const card = aboutPage.team.find((c) => c.name === member.name)
+      if (!card) {
+        problems.push(`About: no card for ${member.name}`)
+        continue
+      }
+      expectAbout(card.position === member.position, `${member.name}'s card shows "${card.position}"`)
+      expectAbout(card.bioLength > 40, `${member.name}'s bio is ${card.bioLength} characters`)
+      expectAbout(
+        (card.alt ?? '').includes(member.name),
+        `${member.name}'s portrait has alt "${card.alt}"`,
+      )
+      expectAbout(
+        card.src === `/images/team/${member.slug}.svg`,
+        `${member.name}'s portrait points at ${card.src}`,
+      )
+    }
+
+    const broken = aboutPage.images.filter((i) => !i.complete || i.natural === 0)
+    console.log(`images           ${aboutPage.images.length} on the page, ${broken.length} broken`)
+    // §3: a missing file falls back rather than showing a broken image, so a
+    // zero natural width here means the fallback is missing too.
+    broken.forEach((i) => problems.push(`About: image failed to load — ${i.src}`))
+
+    expectAbout(aboutPage.ids.includes('team'), 'the #team anchor the footer links to is gone')
+    expectAbout(
+      aboutPage.ids.includes('company'),
+      'the #company section has no id to link to',
+    )
+  }
+
+  console.log('\n---------------- ABOUT TEAM DEEP LINK ----------------')
+  // Guarded on `aboutPage` rather than on the click alone: under
+  // `--responsive-only` the whole section above never ran, so there is no click
+  // to report on and `clickedTeam` was never bound.
+  if (!aboutPage) {
+    console.log('skipped (--responsive-only)')
+  } else if (!clickedTeam?.clicked) {
+    console.log(`skipped — ${clickedTeam?.reason ?? 'the footer link was not clicked'}`)
+    problems.push(
+      `About: ${clickedTeam?.reason ?? 'the footer /about#team link could not be clicked'}`,
+    )
+  } else if (!aboutTeamDeepLink?.found) {
+    console.log(`clicked ${clickedTeam.href} → ${aboutTeamDeepLink?.url}, no #team on the page`)
+    problems.push('About: /about#team landed on a page with no #team section')
+  } else {
+    const expectLink = (condition, message) => {
+      if (!condition) problems.push(`About: ${message}`)
+    }
+
+    console.log(
+      `clicked ${clickedTeam.href} → ${aboutTeamDeepLink.url} ` +
+        `top=${aboutTeamDeepLink.top} retry=${aboutTeamDeepLink.retryTop} ` +
+        `resolve=${aboutTeamDeepLink.docTop}->${aboutTeamDeepLink.retryDocTop} ` +
+        `scroll-mt=${aboutTeamDeepLink.scrollMarginTop} ` +
+        `cards=${aboutTeamDeepLink.cardsInView}`,
+    )
+    // Two separate claims, for the same reason the careers anchor is split: the
+    // first says the reader ends up looking at the team, the second says the
+    // offset is the one the stylesheet asked for. Widening one range to cover
+    // both would hide a regression in either.
+    expectLink(
+      aboutTeamDeepLink.top >= 0 && aboutTeamDeepLink.top <= 250,
+      `the #team heading landed at ${aboutTeamDeepLink.top}px, not in view`,
+    )
+    expectLink(
+      aboutTeamDeepLink.cardsInView > 0,
+      'the team section scrolled into view but none of its cards did',
+    )
+    expectLink(
+      aboutTeamDeepLink.retryDocTop === aboutTeamDeepLink.docTop,
+      'the page kept moving after the deep link settled',
+    )
+    expectLink(
+      aboutTeamDeepLink.retryTop === parseInt(aboutTeamDeepLink.scrollMarginTop, 10),
+      `the deep link landed at ${aboutTeamDeepLink.retryTop}px, not the ${aboutTeamDeepLink.scrollMarginTop} scroll margin`,
+    )
+  }
+
+  console.log('\n================ CONTACT ================')
+  if (!contactPage) {
+    console.log('skipped (--responsive-only)')
+  } else {
+    const expectContact = (condition, message) => {
+      if (!condition) problems.push(`Contact: ${message}`)
+    }
+
+    console.log(`page             h1=${JSON.stringify(contactPage.h1)} h1s=${contactPage.h1Count}`)
+    expectContact(contactPage.h1Count === 1, `the page has ${contactPage.h1Count} h1 elements, not 1`)
+    expectContact(contactPage.url === '/contact', `the page rendered at ${contactPage.url}`)
+
+    // §39's five fields.
+    console.log(`fields           ${contactPage.fieldNames.join(', ') || 'none'}`)
+    for (const name of ['name', 'email', 'subject', 'phone', 'message']) {
+      expectContact(
+        contactPage.fieldNames.includes(name),
+        `the form has no "${name}" field`,
+      )
+    }
+    // Every field that asks for input should also say what it wants.
+    console.log(`labels           ${contactPage.labels.join(' | ') || 'none'}`)
+    expectContact(
+      contactPage.labels.length >= 5,
+      `only ${contactPage.labels.length} of the form's fields are labelled`,
+    )
+
+    // §55: the subject list is business data, so the form has to be rendering
+    // the data file rather than a list that drifted from it.
+    console.log(`subjects         ${contactPage.subjectOptions.join(', ') || 'none'}`)
+    expectContact(
+      contactPage.subjectOptions.join(',') ===
+        CONTACT_SUBJECTS.map((s) => s.value).join(','),
+      `the subject dropdown offers [${contactPage.subjectOptions.join(', ')}], not the data file's [${CONTACT_SUBJECTS.map((s) => s.value).join(', ')}]`,
+    )
+
+    // §39's business information, checked against the spec's own strings rather
+    // than against the data file — the data file is what is being tested.
+    console.log(`address          ${contactPage.address}`)
+    for (const part of ['2435 Dudley St', 'Unit 90', 'Saskatoon', 'S7M 3Z7']) {
+      expectContact(
+        contactPage.address.includes(part),
+        `the address does not include "${part}"`,
+      )
+    }
+    expectContact(
+      contactPage.pageText.includes('639-384-9999'),
+      'the phone number is not written anywhere on the page',
+    )
+    expectContact(
+      contactPage.pageText.includes('info@carkingdom.ca'),
+      'the email is not written anywhere on the page',
+    )
+
+    console.log(
+      `hours            ${contactPage.hours.slice(0, 90)}${contactPage.hours.length > 90 ? '…' : ''}`,
+    )
+    expectContact(contactPage.hours.length > 20, 'the opening hours render as nothing')
+
+    // §39's three CTAs: call, email, appointment.
+    console.log(
+      `ctas             tel=${contactPage.telLinks} mailto=${contactPage.mailLinks} appointments=${contactPage.appointmentLinks}`,
+    )
+    expectContact(contactPage.telLinks > 0, 'no tel: link anywhere on the page')
+    expectContact(contactPage.mailLinks > 0, 'no mailto: link anywhere on the page')
+    expectContact(
+      contactPage.appointmentLinks > 0,
+      'no link to the appointments page',
+    )
+
+    // The map. Not asserted to have *loaded* — it needs a network — but it has
+    // to be a labelled, lazy iframe rather than an unlabelled block.
+    console.log(
+      `map              present=${contactPage.hasMap} title=${JSON.stringify(contactPage.mapTitle)} loading=${contactPage.mapLoading}`,
+    )
+    expectContact(contactPage.hasMap, 'the map section has no iframe')
+    expectContact(
+      Boolean(contactPage.mapTitle),
+      'the map iframe has no title, so a screen reader announces nothing',
+    )
+    expectContact(
+      contactPage.mapLoading === 'lazy',
+      `the map iframe loads eagerly (loading=${contactPage.mapLoading})`,
+    )
+
+    console.log('\n---------------- CONTACT FORM ----------------')
+    if (!contactForm) {
+      problems.push('Contact: the form probe returned nothing')
+    } else {
+      const empty = contactForm.emptySubmit
+      console.log(
+        `empty submit     summary=${JSON.stringify(empty?.summary)} errors=${empty?.errors?.length} invalid=${JSON.stringify(empty?.invalid)}`,
+      )
+      // The subject arrives pre-filled, so four of the five fields are the ones
+      // an empty submit has to refuse.
+      expectContact(
+        empty?.invalid?.length === 4,
+        `an empty submit marked ${empty?.invalid?.length} fields invalid (${empty?.invalid?.join(', ')}), not the 4 that were empty`,
+      )
+      expectContact(
+        empty?.errors?.length >= 4,
+        `an empty submit produced ${empty?.errors?.length} field errors, not 4`,
+      )
+      expectContact(
+        Boolean(empty?.summary),
+        'an empty submit produced no error summary for a screen reader',
+      )
+      expectContact(
+        empty?.invalid?.includes('name'),
+        'an empty submit did not flag the name field',
+      )
+
+      console.log(
+        `bad email        invalid=${JSON.stringify(contactForm.badEmail?.invalid)} ${JSON.stringify(contactForm.badEmail?.errors)}`,
+      )
+      expectContact(
+        contactForm.badEmail?.invalid?.join(',') === 'email',
+        `an address of "not-an-email" marked [${contactForm.badEmail?.invalid?.join(', ')}] invalid, not just the email`,
+      )
+
+      console.log(
+        `short message    invalid=${JSON.stringify(contactForm.shortMessage?.invalid)} ${JSON.stringify(contactForm.shortMessage?.errors)}`,
+      )
+      expectContact(
+        contactForm.shortMessage?.invalid?.join(',') === 'message',
+        `a two-word message marked [${contactForm.shortMessage?.invalid?.join(', ')}] invalid, not just the message`,
+      )
+
+      const sent = contactForm.submitted
+      console.log(
+        `submitted        formGone=${sent?.formGone} named=${sent?.namedEmail} routed=${sent?.saysDepartment}`,
+      )
+      console.log(`confirmation     ${JSON.stringify((sent?.confirmation ?? '').slice(0, 110))}`)
+      expectContact(sent?.formGone, 'the form is still on screen after a valid submit')
+      expectContact(
+        sent?.namedEmail,
+        'the confirmation does not name the address the message was sent from',
+      )
+      // §55 keeps the routing out of the component, so the confirmation reading
+      // out the department is the visible proof the subject selection survived
+      // the round trip through the form.
+      expectContact(
+        sent?.saysDepartment,
+        'the confirmation does not say where the message was routed',
+      )
+    }
+  }
+
+  console.log('\n---------------- ABOUT & CONTACT RESPONSIVE ----------------')
+  for (const row of contactResponsive) {
+    console.log(
+      `${row.path.padEnd(10)} @${String(row.width).padEnd(5)} scrollWidth=${row.scrollWidth} overflow=${row.overflowX}`,
+    )
+    row.offenders?.forEach((o) => console.log(`         ↳ ${o}`))
+  }
 
   console.log('\n================ FOOTER LINKS ================')
   if (footerLinks.length === 0) {

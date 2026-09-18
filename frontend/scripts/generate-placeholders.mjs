@@ -22,6 +22,7 @@ import { fileURLToPath } from 'node:url'
 import { VEHICLES } from '../src/data/vehicles.js'
 import { SERVICES } from '../src/data/services.js'
 import { PARTS } from '../src/data/parts.js'
+import { TEAM } from '../src/data/team.js'
 
 const OUTPUT_ROOT = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -207,6 +208,11 @@ const STATIC_FILES = [
   { path: 'general/service-bay.svg', category: 'services', label: 'Our service bay', sublabel: 'Certified technicians' },
   { path: 'general/parts-counter.svg', category: 'parts', label: 'Our parts counter', sublabel: 'Genuine and aftermarket' },
   { path: 'general/about.svg', category: 'team', label: 'About Car Kingdom', sublabel: 'Locally owned in Saskatoon' },
+
+  // Careers. The job postings themselves carry no photograph — §35 and §36 ask
+  // the cards and the posting for text, and a stock picture of a handshake
+  // above every opening would be noise. The category exists for this one image.
+  { path: 'careers/join-our-team.svg', category: 'team', label: 'Join the team', sublabel: 'Fourteen people on Dudley Street' },
 ]
 
 /**
@@ -408,6 +414,53 @@ function serviceFiles() {
   }))
 }
 
+/**
+ * A head-and-shoulders portrait, used for every team member.
+ *
+ * A parameterised function rather than an entry in `GLYPHS` because the team
+ * grid shows eight of these at once: eight identical drawings read as a broken
+ * page, so each one is tinted from the palette below.
+ */
+const portraitGlyph = (stroke) => `
+  <g transform="translate(0, -10)" fill="none" stroke="${stroke}" stroke-width="14"
+     stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="400" cy="264" r="76"/>
+    <path d="M256 512 Q256 396 400 396 Q544 396 544 512"/>
+  </g>`
+
+/** Tints for the team portraits, cycled by slug so a member keeps the same one. */
+const PORTRAIT_STROKES = [
+  '#2c5f9e',
+  '#3f7a5c',
+  '#8a5a2b',
+  '#6b4a86',
+  '#a3172a',
+  '#2f6f80',
+  '#7a6a2c',
+  '#4a5570',
+]
+
+/** One SVG per team member, so the About page has a face for every card. */
+function teamFiles() {
+  return TEAM.map((member, index) => {
+    // By position in the list, not by first letter: two members sharing an
+    // initial would otherwise be drawn in the same colour next to each other.
+    const stroke = PORTRAIT_STROKES[index % PORTRAIT_STROKES.length]
+
+    return {
+      path: `team/${member.slug}.svg`,
+      category: 'team',
+      label: member.name,
+      // The position rather than the bio: a bio is a paragraph and will not fit
+      // under an 800x600 drawing, and the name alone leaves the card looking
+      // like something failed to load.
+      sublabel: member.position,
+      stroke,
+      glyph: portraitGlyph(stroke),
+    }
+  })
+}
+
 /** One SVG per frame of every vehicle's gallery. */
 function vehicleFiles() {
   return VEHICLES.flatMap((vehicle) =>
@@ -429,7 +482,8 @@ async function main() {
   const vehicles = vehicleFiles()
   const services = serviceFiles()
   const parts = partFiles()
-  const files = [...STATIC_FILES, ...services, ...parts, ...vehicles]
+  const team = teamFiles()
+  const files = [...STATIC_FILES, ...services, ...parts, ...team, ...vehicles]
 
   for (const file of files) {
     const target = join(OUTPUT_ROOT, file.path)
@@ -439,10 +493,12 @@ async function main() {
 
   console.log(`${files.length} images written to public/images/`)
   console.log(
-    `  ${STATIC_FILES.length} static, ${services.length} services, ${parts.length} parts, ${vehicles.length} vehicle gallery frames`,
+    `  ${STATIC_FILES.length} static, ${services.length} services, ${parts.length} parts, ` +
+      `${team.length} team portraits, ${vehicles.length} vehicle gallery frames`,
   )
   console.log(
-    `  from ${VEHICLES.length} vehicles, ${SERVICES.length} services and ${PARTS.length} parts in src/data/`,
+    `  from ${VEHICLES.length} vehicles, ${SERVICES.length} services, ${PARTS.length} parts ` +
+      `and ${TEAM.length} team members in src/data/`,
   )
 }
 

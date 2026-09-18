@@ -12,8 +12,20 @@
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
+/**
+ * Loose URL test. Accepts `linkedin.com/in/someone` and
+ * `https://portfolio.example.ca` alike — a candidate who types their profile
+ * without the scheme has still given us a usable link, and we prepend `https://`
+ * when we render it.
+ */
+const URL_LIKE = /^(https?:\/\/)?[\w-]+(\.[\w-]+)+([/?#][^\s]*)?$/i
+
 export function isFilled(value) {
   return String(value ?? '').trim().length > 0
+}
+
+export function isUrl(value) {
+  return URL_LIKE.test(String(value).trim())
 }
 
 export function isEmail(value) {
@@ -59,4 +71,31 @@ export function validateContact({ name, email, phone }) {
   }
 
   return errors
+}
+
+/**
+ * The résumé upload rules.
+ *
+ * Live here rather than inside the dropzone because the same rules have to hold
+ * in two places: the dropzone checks a file the moment it is chosen, and the
+ * form checks it again on submit. Two copies of "5 MB" is how a form ends up
+ * accepting a file it will later reject.
+ */
+export const RESUME_MAX_BYTES = 5 * 1024 * 1024
+const RESUME_EXTENSIONS = ['.pdf', '.doc', '.docx']
+
+/** Returns an error message, or null when the file is acceptable. */
+export function validateResumeFile(file) {
+  if (!file) return 'Please attach your résumé.'
+
+  const name = String(file.name ?? '').toLowerCase()
+  if (!RESUME_EXTENSIONS.some((extension) => name.endsWith(extension))) {
+    return 'Please attach a PDF, DOC or DOCX file.'
+  }
+
+  if (file.size > RESUME_MAX_BYTES) {
+    return 'That file is over 5 MB. Please attach a smaller one.'
+  }
+
+  return null
 }

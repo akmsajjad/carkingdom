@@ -90,3 +90,44 @@ export async function submitPartsOrder({ items, fulfilment, ...fields }) {
     { delay: SUBMIT_DELAY },
   )
 }
+
+/**
+ * POST /api/contact/
+ *
+ * §39's enquiry form. The subject is sent as the stable `value` from
+ * `data/contact.js` rather than as the label the customer read, so rewording a
+ * label in the UI does not change what a backend has to match on.
+ */
+export async function submitContact({ subject, ...fields }) {
+  return mockRequest(
+    () => receipt({ type: 'contact', subject, ...fields }),
+    { delay: SUBMIT_DELAY },
+  )
+}
+
+/**
+ * POST /api/job-applications/
+ *
+ * The one lead that carries a file, and the one place this build's frontend-only
+ * constraint (§1) is visible in the payload: nothing is uploaded. The `File` the
+ * customer picked is stripped out here and replaced with its name, size and
+ * type, so the receipt describes an attachment that a Django version would
+ * actually have received.
+ *
+ * The Django version takes `multipart/form-data` and this function body becomes
+ * a `FormData` post — the metadata below is exactly what the serializer would
+ * expose for the file field.
+ */
+export async function submitJobApplication({ resume, ...fields }) {
+  return mockRequest(
+    () =>
+      receipt({
+        type: 'job-application',
+        resume: resume
+          ? { name: resume.name, size: resume.size, type: resume.type }
+          : null,
+        ...fields,
+      }),
+    { delay: SUBMIT_DELAY },
+  )
+}

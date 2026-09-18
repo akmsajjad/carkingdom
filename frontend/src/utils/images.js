@@ -58,3 +58,17 @@ export function teamImage(slug) {
 export function careerImage(slug) {
   return `/images/careers/${slug}.svg`
 }
+
+/**
+ * Shared site imagery — the showroom, the service bay, the parts counter, the
+ * About page photograph.
+ *
+ * These files have been generated since Phase 1 but nothing referenced them
+ * until the About page needed one, so `general` was the only category with no
+ * helper and the alternative was a path written straight into JSX. §3 puts every
+ * image path in this module, and a category that is exempt from that is the one
+ * that ends up hardcoded.
+ */
+export function generalImage(slug) {
+  return `/images/general/${slug}.svg`
+}

@@ -115,3 +115,17 @@ export function formatRelativeDate(iso) {
 export function formatCode(value) {
   return value ? String(value).toUpperCase() : '—'
 }
+
+/** 2.4 MB — the size a person recognises, not the byte count a browser reports.
+ *  Deliberately no decimal for anything under 10 KB, where "0.0 KB" would be
+ *  less informative than "512 B". */
+export function formatFileSize(bytes) {
+  const size = Number(bytes)
+  if (!Number.isFinite(size) || size < 0) return '—'
+  if (size < 1024) return `${size} B`
+
+  const kb = size / 1024
+  if (kb < 1000) return `${Math.round(kb)} KB`
+
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`
+}

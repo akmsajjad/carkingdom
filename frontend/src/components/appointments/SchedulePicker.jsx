@@ -194,8 +194,8 @@ export default function SchedulePicker({
               <p className="flex items-start gap-2 text-sm text-slate-600">
                 <Ban className="mt-0.5 size-4 shrink-0 text-slate-400" aria-hidden="true" />
                 <span>
-                  Every time on this day has gone. Try another day, or call us — we
-                  can usually fit you in.
+                  Nothing left on this day — the times below are booked or already
+                  gone. Try another day, or call us — we can usually fit you in.
                 </span>
               </p>
             )}
