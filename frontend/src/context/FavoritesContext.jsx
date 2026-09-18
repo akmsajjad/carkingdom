@@ -56,6 +56,25 @@ export function FavoritesProvider({ children }) {
     toast.info('Favorites cleared')
   }, [reset, toast])
 
+  /**
+   * Drops saved ids that no longer exist in the inventory.
+   *
+   * Silent, and deliberately so: this fires while somebody is looking at their
+   * saved list, because a vehicle they saved has sold and left the lot. A toast
+   * for each one would turn a tidying-up into an alarm, and the page itself
+   * says what happened. The alternative — leaving the id in place — is a header
+   * badge that counts a car the page cannot show.
+   */
+  const pruneFavorites = useCallback(
+    (validIds) => {
+      const valid = new Set(validIds)
+      const missing = favoriteIds.filter((id) => !valid.has(id))
+      if (missing.length === 0) return
+      setFavoriteIds(favoriteIds.filter((id) => valid.has(id)))
+    },
+    [favoriteIds, setFavoriteIds],
+  )
+
   const value = useMemo(
     () => ({
       favoriteIds,
@@ -64,8 +83,16 @@ export function FavoritesProvider({ children }) {
       toggleFavorite,
       removeFavorite,
       clearFavorites,
+      pruneFavorites,
     }),
-    [favoriteIds, isFavorite, toggleFavorite, removeFavorite, clearFavorites],
+    [
+      favoriteIds,
+      isFavorite,
+      toggleFavorite,
+      removeFavorite,
+      clearFavorites,
+      pruneFavorites,
+    ],
   )
 
   return (

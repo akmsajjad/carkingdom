@@ -33,6 +33,7 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { JOBS } from '../src/data/careers.js'
 import { COMPANY_VALUES, MISSION, VISION } from '../src/data/company.js'
+import { COMPARISON_ROWS, FEATURES_ROW_LABEL } from '../src/data/comparison.js'
 import { CONTACT_SUBJECTS } from '../src/data/contact.js'
 import { TEAM } from '../src/data/team.js'
 
@@ -234,6 +235,10 @@ let aboutTeamDeepLink = null
 let contactPage = null
 let contactForm = null
 let contactResponsive = []
+let favoritesPage = null
+let comparePage = null
+let compareTable = null
+let compareResponsive = []
 let footerLinks = []
 
 async function visit(session, path, label) {
@@ -319,6 +324,16 @@ async function main() {
     deviceScaleFactor: 1,
     mobile: false,
   })
+
+  // Every run starts from empty client storage. The tab opens on `about:blank`,
+  // where `localStorage` is unreachable, so the app origin has to be loaded
+  // first. Without this the sweep inherits whatever the previous run's tail left
+  // behind — a run that stopped early leaves the compare ids seeded, and
+  // `/compare` then reports a table on a sweep that is meant to be showing the
+  // page's empty state.
+  await send(session, 'Page.navigate', { url: `${BASE}/` })
+  await sleep(900)
+  await evaluate(session, `localStorage.clear(); true`)
 
   await visit(session, '/', 'Home')
   await screenshot(session, join(SHOT_DIR, 'cd-shot-home.png'))
@@ -461,6 +476,18 @@ async function main() {
     // The responsive sweep proves the layout holds; this proves the thing the
     // phase is actually about — that filtering, sorting, paging, searching and
     // saving all change the URL and the results, rather than only rendering.
+    //
+    // The favorite and compare steps below assert on a *change*, so the state
+    // they start from has to be known. The compare probe at the end of a
+    // previous run leaves its ids in storage, and a card that is already
+    // comparing toggles the other way — clearing here, rather than only at the
+    // end of the probe, is what makes a re-run start clean.
+    await evaluate(
+      session,
+      `localStorage.removeItem('carkingdom:favorites');
+       localStorage.removeItem('carkingdom:compare');
+       true`,
+    )
     await send(session, 'Page.navigate', { url: `${BASE}/used-cars` })
     await sleep(1200)
 
@@ -2474,7 +2501,7 @@ async function main() {
   aboutPage = await evaluate(
     session,
     `(() => {
-      const text = (el) => (el?.textContent ?? '').replace(/\\\\s+/g, ' ').trim()
+      const text = (el) => (el?.textContent ?? '').replace(/\\s+/g, ' ').trim()
       const cards = [...document.querySelectorAll('main ul > li')]
       const team = cards.filter((li) => li.querySelector('h3') && li.querySelector('img'))
 
@@ -2590,7 +2617,7 @@ async function main() {
   contactPage = await evaluate(
     session,
     `(() => {
-      const text = (el) => (el?.textContent ?? '').replace(/\\\\s+/g, ' ').trim()
+      const text = (el) => (el?.textContent ?? '').replace(/\\s+/g, ' ').trim()
       const form = document.querySelector('main form')
       const iframe = document.querySelector('main iframe')
       const labels = form
@@ -2632,7 +2659,7 @@ async function main() {
     session,
     `(async () => {
       const wait = (ms) => new Promise((r) => setTimeout(r, ms))
-      const text = (el) => (el?.textContent ?? '').replace(/\\\\s+/g, ' ').trim()
+      const text = (el) => (el?.textContent ?? '').replace(/\\s+/g, ' ').trim()
       const q = (name) => document.querySelector('main form [name="' + name + '"]')
       const form = () => document.querySelector('main form')
       const fieldErrors = () =>
@@ -2743,6 +2770,423 @@ async function main() {
           `About/Contact: horizontal overflow on ${path} at ${width}px (${row.scrollWidth}px) — ${row.offenders.join('; ')}`,
         )
       }
+    }
+  }
+
+  step('favorites empty state')
+  // --- §25 Saved vehicles --------------------------------------------------
+  // Seeded rather than clicked through: four saves through the UI is four
+  // navigations for state the app itself persists, and what this section has to
+  // prove is what the page does with that state. The toggle that writes it is
+  // covered by the marketplace interactions earlier. Seeded through the app's
+  // own service, so the ids are real inventory ids rather than the harness's
+  // idea of them.
+  //
+  // Every mount is driven from Node, between evaluations: a `location.reload()`
+  // inside an `evaluate` tears down the JS context that call is awaiting on, so
+  // the promise never settles. Same reason `waitFor` is a Node-side helper and
+  // cannot be called from page code.
+  await send(session, 'Emulation.setDeviceMetricsOverride', {
+    width: 1280,
+    height: 900,
+    deviceScaleFactor: 1,
+    mobile: false,
+  })
+
+  /**
+   * A genuinely fresh mount of `path`.
+   *
+   * `about:blank` in between, because both of these pages read localStorage once
+   * on mount: a `Page.navigate` to the URL the tab is already on can leave the
+   * previous state on screen, and the probe would then be reading a page it
+   * never actually reloaded.
+   */
+  const mountFresh = async (path) => {
+    await send(session, 'Page.navigate', { url: 'about:blank' })
+    await send(session, 'Page.navigate', { url: `${BASE}${path}` })
+    await sleep(1500)
+    await waitForMount(session)
+  }
+
+  const seedFavorites = (count) =>
+    evaluate(
+      session,
+      `(async () => {
+        const mod = await import('/src/services/vehicles.js')
+        const { results } = await mod.getVehicles({ pageSize: ${count} })
+        localStorage.setItem('carkingdom:favorites', JSON.stringify(results.map((v) => v.id)))
+        return results.map((v) => ({ id: v.id, title: v.title }))
+      })()`,
+    )
+
+  // The empty state first, with storage deliberately cleared.
+  await evaluate(session, `localStorage.setItem('carkingdom:favorites', '[]')`)
+  await mountFresh('/favorites')
+
+  const favoritesEmpty = await evaluate(
+    session,
+    `(() => {
+      const text = (el) => (el?.textContent ?? '').replace(/\\s+/g, ' ').trim()
+      const stored = JSON.parse(localStorage.getItem('carkingdom:favorites') ?? '[]')
+      return {
+        stored: stored.length,
+        heading: text(document.querySelector('main h1')),
+        // §25's empty state — a title, an explanation and a way out.
+        hasEmptyCopy: /nothing saved yet/i.test(text(document.querySelector('main'))),
+        hasBrowseCta: !!document.querySelector('main a[href="/used-cars"]'),
+        rows: document.querySelectorAll('main ul > li').length,
+      }
+    })()`,
+  )
+
+  // Then a real shortlist, fetched by the page from the ids it finds.
+  const favoritesSeeded = await seedFavorites(3)
+  await mountFresh('/favorites')
+  await waitFor(session, `document.querySelectorAll('main ul > li').length > 0`)
+
+  const favoritesPopulated = await evaluate(
+    session,
+    `(async () => {
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms))
+      const text = (el) => (el?.textContent ?? '').replace(/\\s+/g, ' ').trim()
+      const ids = () => JSON.parse(localStorage.getItem('carkingdom:favorites') ?? '[]')
+      // Only the saved rows: the selector also matches the specification lists
+      // inside each row, which would count four spec lines as four vehicles. A
+      // saved row is the one carrying the vehicle's heading.
+      const rows = () =>
+        [...document.querySelectorAll('main ul > li')].filter((li) =>
+          li.querySelector('h3'),
+        )
+      // Read from the accessible name rather than the badge span: the count is
+      // folded into the link's aria-label as "Favorites (3)", and the badge
+      // itself is aria-hidden and absent entirely at zero.
+      const badge = () => {
+        const link = document.querySelector('header a[href="/favorites"]')
+        const match = /\\((\\d+)\\)/.exec(link?.getAttribute('aria-label') ?? '')
+        return match ? Number(match[1]) : 0
+      }
+
+      const populated = {
+        stored: ids().length,
+        rows: rows().length,
+        titles: rows().map((li) => text(li.querySelector('h3'))),
+        // §25 asks for exactly these three: the vehicles, a way to remove one,
+        // and a way to open it.
+        removeButtons: rows().filter((li) =>
+          [...li.querySelectorAll('button')].some((b) => /^remove$/i.test(text(b))),
+        ).length,
+        detailLinks: rows()
+          .map((li) => li.querySelector('a[href^="/used-cars/"]')?.getAttribute('href') ?? null)
+          .filter(Boolean),
+        compareToggles: rows().filter((li) =>
+          [...li.querySelectorAll('button')].some((b) => /compare/i.test(text(b))),
+        ).length,
+        images: [...document.querySelectorAll('main img')].map((i) => ({
+          src: i.getAttribute('src'),
+          complete: i.complete,
+          natural: i.naturalWidth,
+        })),
+      }
+
+      // Waits for the expected change rather than for the value to stop
+      // changing. A settle check takes its first reading before React has
+      // re-rendered and returns on the stale value it finds — and here removing
+      // a row also refetches the remaining vehicles, so the old list stays on
+      // screen for the length of the mock delay.
+      const until = async (predicate, timeout = 6000) => {
+        const deadline = Date.now() + timeout
+        while (Date.now() < deadline) {
+          if (predicate()) return true
+          await wait(120)
+        }
+        return false
+      }
+
+      // Remove one, through the real control, and watch the list and the badge.
+      // The second row rather than a named one: which vehicle it is does not
+      // matter to this assertion, only that the row and the badge both drop it.
+      const victimRow = rows()[1] ?? null
+      const removedTitle = text(victimRow?.querySelector('h3'))
+      const badgeBefore = badge()
+      const removeButton = victimRow
+        ? [...victimRow.querySelectorAll('button')].find((b) => /^remove$/i.test(text(b)))
+        : null
+
+      removeButton?.click()
+      await until(() => rows().length === populated.rows - 1)
+
+      const afterRemove = {
+        removedTitle,
+        removeFound: !!removeButton,
+        rows: rows().length,
+        titles: rows().map((li) => text(li.querySelector('h3'))),
+        stored: ids().length,
+        badgeBefore,
+        badgeAfter: badge(),
+      }
+
+      // Clear all, which should return the page to the empty state it started in.
+      const clearButton = [...document.querySelectorAll('main button')].find((b) =>
+        /clear all/i.test(text(b)),
+      )
+      clearButton?.click()
+      await until(() => rows().length === 0)
+      await wait(300)
+
+      const afterClear = {
+        clearFound: !!clearButton,
+        stored: ids().length,
+        hasEmptyCopy: /nothing saved yet/i.test(text(document.querySelector('main'))),
+        badgeAfter: badge(),
+      }
+
+      return {
+        url: location.pathname,
+        h1Count: document.querySelectorAll('main h1').length,
+        populated,
+        afterRemove,
+        afterClear,
+      }
+    })()`,
+    40000,
+  )
+
+  favoritesPage = {
+    ...favoritesPopulated,
+    empty: favoritesEmpty,
+    seeded: favoritesSeeded,
+  }
+
+  step('compare states')
+  // --- §26 Compare vehicles ------------------------------------------------
+  // Three states of one route, each needing its own fresh mount, so the
+  // navigation is driven from Node and each state is read by its own short
+  // evaluate — the same shape as the saved list above.
+  const seedCompare = (count) =>
+    evaluate(
+      session,
+      count === 0
+        ? `localStorage.setItem('carkingdom:compare', '[]')`
+        : `(async () => {
+        const mod = await import('/src/services/vehicles.js')
+        const { results } = await mod.getVehicles({ pageSize: ${count} })
+        localStorage.setItem('carkingdom:compare', JSON.stringify(results.map((v) => v.id)))
+        return results.map((v) => ({ id: v.id, title: v.title }))
+      })()`,
+    )
+
+  const readCompare = () =>
+    evaluate(
+      session,
+      `(() => {
+        const text = (el) => (el?.textContent ?? '').replace(/\\s+/g, ' ').trim()
+        const stored = JSON.parse(localStorage.getItem('carkingdom:compare') ?? '[]')
+        return {
+          stored: stored.length,
+          heading: text(document.querySelector('main h1')),
+          tables: document.querySelectorAll('main table').length,
+          body: text(document.querySelector('main')),
+        }
+      })()`,
+    )
+
+  // §26 wants multiple vehicles. One is not a comparison, so the page has to
+  // say so rather than render a one-column table.
+  await seedCompare(0)
+  await mountFresh('/compare')
+  const compareZero = await readCompare()
+
+  const compareOneSeeded = await seedCompare(1)
+  await mountFresh('/compare')
+  const compareOne = await readCompare()
+
+  // ...and then the real thing, left on screen for the table probe below.
+  const compareSeeded = await seedCompare(3)
+  await mountFresh('/compare')
+  const compareThree = await readCompare()
+
+  const queuedTitles = (state, seeded) =>
+    seeded.map((v) => v.title).filter((title) => state.body.includes(title))
+
+  comparePage = {
+    zero: compareZero,
+    one: { ...compareOne, seededTitles: compareOneSeeded.map((v) => v.title) },
+    three: {
+      ...compareThree,
+      seededTitles: compareSeeded.map((v) => v.title),
+    },
+    queued: queuedTitles(compareThree, compareSeeded),
+    oneQueued: queuedTitles(compareOne, compareOneSeeded),
+  }
+
+  step('compare table')
+  compareTable = await evaluate(
+    session,
+    `(async () => {
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms))
+      const text = (el) => (el?.textContent ?? '').replace(/\\s+/g, ' ').trim()
+      const table = () => document.querySelector('main table')
+
+      // In-page, not the Node-side waitFor — that helper lives in the harness
+      // and takes a session, so calling it here would throw inside the evaluate.
+      const until = async (predicate, timeout = 8000) => {
+        const deadline = Date.now() + timeout
+        while (Date.now() < deadline) {
+          if (predicate()) return true
+          await wait(120)
+        }
+        return false
+      }
+
+      await until(() => table()?.querySelectorAll('thead th').length > 1)
+
+      const rowLabels = () =>
+        [...table().querySelectorAll('tbody th[scope="row"]')].map((th) =>
+          text(th).replace(/\\s*Differs\\s*/i, '').replace(/\\d+ shared hidden/i, '').trim(),
+        )
+      const headerCells = () => [...table().querySelectorAll('thead th')]
+      const featureRows = () =>
+        [...table().querySelectorAll('tbody tr')]
+          .filter((tr) => /features/i.test(text(tr.querySelector('th'))))
+          .flatMap((tr) => [...tr.querySelectorAll('td ul li')])
+
+      const differencesToggle = () =>
+        [...document.querySelectorAll('main input[type="checkbox"]')][0] ?? null
+
+      const readOnlyDifferences = {
+        checked: differencesToggle()?.checked ?? null,
+        featureRows: featureRows().length,
+        hiddenNote: /shared hidden/i.test(text(table())),
+      }
+
+      // Unchecking has to bring the shared features back — otherwise the
+      // control is decoration.
+      const toggle = differencesToggle()
+      toggle?.click()
+      await wait(400)
+      const readAllFeatures = {
+        checked: differencesToggle()?.checked ?? null,
+        featureRows: featureRows().length,
+      }
+      differencesToggle()?.click()
+      await wait(400)
+
+      const columns = headerCells()
+        .slice(1)
+        .map((th) => ({
+          title: text(th.querySelector('h2')),
+          href: th.querySelector('a')?.getAttribute('href') ?? null,
+          img: th.querySelector('img')?.getAttribute('src') ?? null,
+        }))
+
+      // Removing a column from the strip above the table.
+      const chip = [...document.querySelectorAll('main ul button')].find((b) =>
+        /remove .* from the comparison/i.test(b.getAttribute('aria-label') ?? ''),
+      )
+      const before = columns.length
+      chip?.click()
+      await wait(900)
+      const afterRemove = {
+        columns: headerCells().length - 1,
+        existingColumns: headerCells().slice(1).length,
+        stored: JSON.parse(localStorage.getItem('carkingdom:compare') ?? '[]').length,
+        removedTitle: chip?.textContent.trim() ?? null,
+      }
+
+      return {
+        url: location.pathname,
+        rowLabels: rowLabels(),
+        columns,
+        columnsBeforeRemove: before,
+        afterRemove,
+        differsRows: [...table().querySelectorAll('tbody th[scope="row"]')]
+          .filter((th) => /differs/i.test(text(th)))
+          .map((th) => text(th).replace(/\\s*Differs\\s*/i, '').trim()),
+        firstColumnSticky:
+          getComputedStyle(table().querySelector('tbody th[scope="row"]')).position,
+        headerSticky: getComputedStyle(headerCells()[0]).position,
+        imageCount: table().querySelectorAll('img').length,
+        brokenImages: [...table().querySelectorAll('img')].filter(
+          (i) => !i.complete || i.naturalWidth === 0,
+        ).length,
+        readOnlyDifferences,
+        readAllFeatures,
+      }
+    })()`,
+    40000,
+  )
+
+  step('compare responsive')
+  // The table is the one place in the app that is wider than its container by
+  // design, so the measurement that matters is not "does it overflow" but
+  // "does it overflow *inside* a scroller, with the label column still pinned".
+  {
+    // Seeded with three so every width below gets a table wide enough to have
+    // something to scroll.
+    await evaluate(
+      session,
+      `(async () => {
+        const mod = await import('/src/services/vehicles.js')
+        const { results } = await mod.getVehicles({ pageSize: 3 })
+        localStorage.setItem('carkingdom:compare', JSON.stringify(results.map((v) => v.id)))
+        return results.length
+      })()`,
+    )
+
+    for (const width of [360, 390, 768, 1280]) {
+      await send(session, 'Emulation.setDeviceMetricsOverride', {
+        width,
+        height: 900,
+        deviceScaleFactor: 1,
+        mobile: false,
+      })
+      await mountFresh('/compare')
+      await waitFor(
+        session,
+        `document.querySelectorAll('main table thead th').length > 1`,
+      )
+
+      compareResponsive.push(
+        await evaluate(
+          session,
+          `(async () => {
+            const wait = (ms) => new Promise((r) => setTimeout(r, ms))
+            const table = document.querySelector('main table')
+            const scroller = table.parentElement
+            const label = table.querySelector('tbody th[scope="row"]')
+            const header = table.querySelector('thead th')
+
+            // Scrolled to prove the pinning, because a sticky cell that is not
+            // being scrolled past is indistinguishable from a static one.
+            const scrollBefore = scroller.scrollLeft
+            scroller.scrollLeft = 240
+            await wait(200)
+
+            const scrollerBox = scroller.getBoundingClientRect()
+            const at240 = {
+              labelLeft: Math.round(label.getBoundingClientRect().left - scrollerBox.left),
+              headerLeft: Math.round(header.getBoundingClientRect().left - scrollerBox.left),
+            }
+
+            scroller.scrollLeft = 0
+            await wait(150)
+
+            return {
+              width: window.innerWidth,
+              scrollerClientWidth: scroller.clientWidth,
+              scrollerScrollWidth: scroller.scrollWidth,
+              scrolls: scroller.scrollWidth > scroller.clientWidth + 1,
+              scrolledTo: scroller.scrollLeft,
+              reached240: scrollBefore !== scroller.scrollLeft || scroller.scrollWidth > scroller.clientWidth + 1,
+              at240,
+              pageOverflowX: document.documentElement.scrollWidth > window.innerWidth + 1,
+              pageScrollWidth: document.documentElement.scrollWidth,
+              columns: table.querySelectorAll('thead th').length - 1,
+              height: Math.round(table.getBoundingClientRect().height),
+            }
+          })()`,
+        ),
+      )
     }
   }
 
@@ -3657,6 +4101,309 @@ async function main() {
       `${row.path.padEnd(10)} @${String(row.width).padEnd(5)} scrollWidth=${row.scrollWidth} overflow=${row.overflowX}`,
     )
     row.offenders?.forEach((o) => console.log(`         ↳ ${o}`))
+  }
+
+  console.log('\n================ FAVORITES ================')
+  if (!favoritesPage) {
+    console.log('skipped (--responsive-only)')
+  } else {
+    const expectFavorites = (condition, message) => {
+      if (!condition) problems.push(`Favorites: ${message}`)
+    }
+    const { empty, populated, afterRemove, afterClear, seeded } = favoritesPage
+
+    console.log(
+      `page             ${favoritesPage.url} h1s=${favoritesPage.h1Count}`,
+    )
+    expectFavorites(
+      favoritesPage.url === '/favorites',
+      `the page rendered at ${favoritesPage.url}`,
+    )
+    expectFavorites(
+      favoritesPage.h1Count === 1,
+      `the page has ${favoritesPage.h1Count} h1 elements, not 1`,
+    )
+
+    // §25's empty state, with storage deliberately cleared first.
+    console.log(
+      `empty state      stored=${empty.stored} rows=${empty.rows} copy=${empty.hasEmptyCopy} cta=${empty.hasBrowseCta}`,
+    )
+    expectFavorites(
+      empty.stored === 0,
+      `storage held ${empty.stored} ids with nothing saved`,
+    )
+    expectFavorites(
+      empty.rows === 0,
+      `the empty state rendered ${empty.rows} saved rows`,
+    )
+    expectFavorites(empty.hasEmptyCopy, 'the empty state has no "Nothing saved yet" copy')
+    expectFavorites(
+      empty.hasBrowseCta,
+      'the empty state offers no route back to the inventory',
+    )
+
+    // §25's populated list, which asks for the vehicles, a way to remove one
+    // and a way to open one. All three are counted per row rather than in
+    // aggregate, so a control missing from one row still fails.
+    console.log(`saved            stored=${populated.stored} rows=${populated.rows}`)
+    populated.titles.forEach((title) => console.log(`                 ↳ ${title}`))
+    expectFavorites(
+      populated.stored === seeded.length,
+      `storage held ${populated.stored} ids for ${seeded.length} seeded vehicles`,
+    )
+    expectFavorites(
+      populated.rows === seeded.length,
+      `${populated.rows} rows for ${seeded.length} seeded vehicles`,
+    )
+    for (const vehicle of seeded) {
+      expectFavorites(
+        populated.titles.includes(vehicle.title),
+        `${vehicle.title} was seeded but is not in the saved list`,
+      )
+    }
+    expectFavorites(
+      populated.removeButtons === populated.rows,
+      `${populated.removeButtons} remove controls for ${populated.rows} rows`,
+    )
+    expectFavorites(
+      populated.detailLinks.length === populated.rows,
+      `${populated.detailLinks.length} detail links for ${populated.rows} rows`,
+    )
+    expectFavorites(
+      populated.compareToggles === populated.rows,
+      `${populated.compareToggles} compare toggles for ${populated.rows} rows`,
+    )
+
+    const brokenSaved = populated.images.filter((i) => !i.complete || i.natural === 0)
+    console.log(
+      `images           ${populated.images.length} on the page, ${brokenSaved.length} broken`,
+    )
+    // §3: a missing file falls back rather than showing a broken image, so a
+    // zero natural width here means the fallback is missing too.
+    brokenSaved.forEach((i) => problems.push(`Favorites: image failed to load — ${i.src}`))
+
+    console.log(
+      `remove one       ${JSON.stringify(afterRemove.removedTitle)} → rows=${afterRemove.rows} stored=${afterRemove.stored} badge ${afterRemove.badgeBefore}→${afterRemove.badgeAfter}`,
+    )
+    expectFavorites(
+      afterRemove.removeFound,
+      'no labelled remove control was found on the row',
+    )
+    expectFavorites(
+      afterRemove.rows === populated.rows - 1,
+      `${afterRemove.rows} rows after removing one of ${populated.rows}`,
+    )
+    expectFavorites(
+      afterRemove.stored === populated.stored - 1,
+      `storage held ${afterRemove.stored} ids after removing one of ${populated.stored}`,
+    )
+    expectFavorites(
+      !afterRemove.titles.includes(afterRemove.removedTitle),
+      `${afterRemove.removedTitle} is still listed after being removed`,
+    )
+    // The header badge reads the same context, so it is the visible proof the
+    // removal reached the shared state and not just the list.
+    expectFavorites(
+      afterRemove.badgeAfter === afterRemove.badgeBefore - 1,
+      `the header badge went ${afterRemove.badgeBefore}→${afterRemove.badgeAfter} after removing one`,
+    )
+
+    console.log(
+      `clear all        stored=${afterClear.stored} emptyCopy=${afterClear.hasEmptyCopy} badge=${afterClear.badgeAfter}`,
+    )
+    expectFavorites(afterClear.clearFound, 'no "Clear all" control was found')
+    expectFavorites(
+      afterClear.stored === 0,
+      `storage held ${afterClear.stored} ids after clearing`,
+    )
+    expectFavorites(
+      afterClear.hasEmptyCopy,
+      'the list did not fall back to the empty state after clearing',
+    )
+    expectFavorites(
+      afterClear.badgeAfter === 0,
+      `the header badge still reads ${afterClear.badgeAfter} after clearing`,
+    )
+  }
+
+  console.log('\n================ COMPARE ================')
+  if (!comparePage || !compareTable) {
+    console.log('skipped (--responsive-only)')
+  } else {
+    const expectCompare = (condition, message) => {
+      if (!condition) problems.push(`Compare: ${message}`)
+    }
+
+    // §26 asks for multiple vehicles, so the two states below two are the ones
+    // that decide whether the page is honest: a one-column table looks like a
+    // bug and teaches nothing.
+    console.log(
+      `0 compared       heading=${JSON.stringify(comparePage.zero.heading)} tables=${comparePage.zero.tables}`,
+    )
+    expectCompare(
+      comparePage.zero.tables === 0,
+      `an empty comparison rendered ${comparePage.zero.tables} tables`,
+    )
+    expectCompare(
+      /nothing to compare/i.test(comparePage.zero.body),
+      'the empty comparison does not say there is nothing to compare',
+    )
+
+    console.log(
+      `1 compared       heading=${JSON.stringify(comparePage.one.heading)} tables=${comparePage.one.tables} names=${comparePage.oneQueued.length}`,
+    )
+    expectCompare(
+      comparePage.one.tables === 0,
+      `a one-vehicle comparison rendered ${comparePage.one.tables} tables`,
+    )
+    expectCompare(
+      /one more/i.test(comparePage.one.body),
+      'a one-vehicle comparison does not ask for a second vehicle',
+    )
+    expectCompare(
+      comparePage.oneQueued.length === 1,
+      `the one-vehicle state names ${comparePage.oneQueued.length} of the 1 queued vehicle`,
+    )
+
+    console.log(
+      `3 compared       heading=${JSON.stringify(comparePage.three.heading)} tables=${comparePage.three.tables} names=${comparePage.queued.length}`,
+    )
+    expectCompare(
+      comparePage.three.tables === 1,
+      `${comparePage.three.tables} tables for 3 compared vehicles, expected 1`,
+    )
+    expectCompare(
+      comparePage.queued.length === 3,
+      `the table names ${comparePage.queued.length} of the 3 compared vehicles`,
+    )
+
+    // §26's nine rows, from the data file rather than from the page, so a row
+    // dropped from the table fails here instead of quietly matching.
+    console.log(`rows             ${compareTable.rowLabels.join(' | ')}`)
+    for (const row of COMPARISON_ROWS) {
+      expectCompare(
+        compareTable.rowLabels.includes(row.label),
+        `the "${row.label}" row is missing from the table`,
+      )
+    }
+    expectCompare(
+      compareTable.rowLabels.includes(FEATURES_ROW_LABEL),
+      `the "${FEATURES_ROW_LABEL}" row is missing from the table`,
+    )
+
+    console.log(
+      `columns          ${compareTable.columnsBeforeRemove} — ${compareTable.columns.map((c) => c.title).join(' | ')}`,
+    )
+    expectCompare(
+      compareTable.columns.length === 3,
+      `${compareTable.columns.length} vehicle columns for 3 compared vehicles`,
+    )
+    expectCompare(
+      compareTable.columns.every((c) => c.href && c.href.startsWith('/used-cars/')),
+      'a vehicle column has no route to the vehicle it describes',
+    )
+    expectCompare(
+      compareTable.columns.every((c) => c.img),
+      'a vehicle column has no image',
+    )
+    expectCompare(
+      compareTable.brokenImages === 0,
+      `${compareTable.brokenImages} of ${compareTable.imageCount} images failed to load`,
+    )
+
+    // The differences emphasis is what makes the table a comparison rather
+    // than two lists side by side, so it is checked against the data: a row
+    // the vehicles agree on must not be marked, and one they do not must be.
+    console.log(`differs          ${compareTable.differsRows.join(' | ') || '(none)'}`)
+    expectCompare(
+      compareTable.differsRows.length > 0,
+      'no row is marked as differing across three different vehicles',
+    )
+
+    console.log(
+      `features         onlyDifferences: ${compareTable.readOnlyDifferences.featureRows} rows, note=${compareTable.readOnlyDifferences.hiddenNote} | all: ${compareTable.readAllFeatures.featureRows} rows`,
+    )
+    expectCompare(
+      compareTable.readOnlyDifferences.checked === true,
+      'the differences filter does not default to on',
+    )
+    expectCompare(
+      compareTable.readOnlyDifferences.featureRows > 0,
+      'the features row is empty even with the differences filter on',
+    )
+    expectCompare(
+      compareTable.readAllFeatures.checked === false,
+      'unchecking the differences filter left it checked',
+    )
+    expectCompare(
+      compareTable.readAllFeatures.featureRows >
+        compareTable.readOnlyDifferences.featureRows,
+      `unchecking the filter did not bring the shared features back (${compareTable.readOnlyDifferences.featureRows} → ${compareTable.readAllFeatures.featureRows})`,
+    )
+    expectCompare(
+      compareTable.readOnlyDifferences.hiddenNote,
+      'the features row does not say how many shared features it is hiding',
+    )
+
+    // Sticky, because the table is wider than its container at every width and
+    // a label column that scrolls away takes the row headings with it.
+    console.log(
+      `sticky           row-label=${compareTable.firstColumnSticky} header=${compareTable.headerSticky}`,
+    )
+    expectCompare(
+      compareTable.firstColumnSticky === 'sticky',
+      `the row-label column is ${compareTable.firstColumnSticky}, not sticky`,
+    )
+    expectCompare(
+      compareTable.headerSticky === 'sticky',
+      `the header cell is ${compareTable.headerSticky}, not sticky`,
+    )
+
+    console.log(
+      `remove a column  ${JSON.stringify(compareTable.afterRemove.removedTitle)} → columns=${compareTable.afterRemove.existingColumns} stored=${compareTable.afterRemove.stored}`,
+    )
+    expectCompare(
+      compareTable.afterRemove.existingColumns === compareTable.columnsBeforeRemove - 1,
+      `${compareTable.afterRemove.existingColumns} columns after removing one of ${compareTable.columnsBeforeRemove}`,
+    )
+    expectCompare(
+      compareTable.afterRemove.stored === compareTable.columnsBeforeRemove - 1,
+      `storage held ${compareTable.afterRemove.stored} ids after removing a column`,
+    )
+  }
+
+  console.log('\n---------------- COMPARE RESPONSIVE ----------------')
+  if (compareResponsive.length === 0) {
+    console.log('skipped (--responsive-only)')
+  } else {
+    console.log(
+      'width  page    scroller        scrolls  pinned(label/header)  cols  height',
+    )
+    for (const row of compareResponsive) {
+      console.log(
+        `${String(row.width).padEnd(6)} ${String(row.pageScrollWidth).padEnd(7)} ` +
+          `${String(`${row.scrollerClientWidth}/${row.scrollerScrollWidth}`).padEnd(15)} ` +
+          `${String(row.scrolls).padEnd(8)} ` +
+          `${String(`${row.at240?.labelLeft}/${row.at240?.headerLeft}`).padEnd(21)} ` +
+          `${String(row.columns).padEnd(5)} ${row.height}`,
+      )
+      // The one thing that must never happen: the table pushing the page
+      // sideways. Overflow inside the scroller is the design; overflow of the
+      // page is a bug.
+      if (row.pageOverflowX) {
+        problems.push(
+          `Compare: the page scrolls sideways at ${row.width}px (scrollWidth ${row.pageScrollWidth})`,
+        )
+      }
+      // Scrolled to 240px, the pinned column must still be flush with the left
+      // edge of the scroller. A sticky cell that drifted would read a positive
+      // offset here.
+      if (row.scrolls && row.at240?.labelLeft > 1) {
+        problems.push(
+          `Compare: the row-label column drifted ${row.at240.labelLeft}px at ${row.width}px while the table was scrolled`,
+        )
+      }
+    }
   }
 
   console.log('\n================ FOOTER LINKS ================')

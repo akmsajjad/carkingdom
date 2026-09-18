@@ -146,10 +146,15 @@ export default function ProductDetails() {
     slug,
   )
 
-  const { data: related = [], loading: relatedLoading } = useAsync(
+  const { data: relatedData, loading: relatedLoading } = useAsync(
     () => getRelatedParts(slug, 3),
     slug,
   )
+
+  // `data` is `null` until the request resolves and a destructuring default
+  // only covers `undefined`, so `related.length` below would read off null on
+  // the render that follows the part arriving.
+  const related = relatedData ?? []
 
   useDocumentTitle(part?.name ?? 'Part details')
 

@@ -184,6 +184,29 @@ export async function getFeaturedVehicles(limit = 6) {
 }
 
 /**
+ * GET /api/vehicles/?ids=ck-1001,ck-1004
+ *
+ * The saved list and the comparison both store ids, so both need to turn those
+ * ids back into vehicles. Returns them in the order the ids were given, because
+ * that order is the order the customer added them — a comparison table whose
+ * columns reshuffle between visits would be worse than useless.
+ *
+ * An id with no vehicle behind it is dropped rather than returned as a hole.
+ * That happens for real once the inventory is a live database: a car sells and
+ * leaves the lot while somebody still has it saved. The caller can see the
+ * shortfall and tidy up its own storage, which beats rendering a blank column.
+ */
+export async function getVehiclesByIds(ids = []) {
+  const wanted = asArray(ids)
+  if (wanted.length === 0) return []
+
+  return mockRequest(() => {
+    const byId = new Map(VEHICLES.map((vehicle) => [vehicle.id, vehicle]))
+    return wanted.map((id) => byId.get(id)).filter(Boolean)
+  })
+}
+
+/**
  * GET /api/vehicles/:slug/similar/
  * Ranks by shared body type, then by how close the price is — the same
  * judgement a salesperson makes when suggesting an alternative.

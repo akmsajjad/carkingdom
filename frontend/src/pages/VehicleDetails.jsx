@@ -37,10 +37,15 @@ export default function VehicleDetails() {
     slug,
   )
 
-  const { data: similar = [], loading: similarLoading } = useAsync(
+  const { data: similarData, loading: similarLoading } = useAsync(
     () => getSimilarVehicles(slug, 3),
     slug,
   )
+
+  // `data` is `null` until the request resolves and a destructuring default
+  // only covers `undefined`, so reading `.length` off it below would throw on
+  // the render that follows the vehicle arriving.
+  const similar = similarData ?? []
 
   useDocumentTitle(vehicle?.title ?? 'Vehicle details')
 

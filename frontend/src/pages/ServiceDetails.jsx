@@ -33,10 +33,15 @@ export default function ServiceDetails() {
     slug,
   )
 
-  const { data: related = [], loading: relatedLoading } = useAsync(
+  const { data: relatedData, loading: relatedLoading } = useAsync(
     () => getRelatedServices(slug, 3),
     slug,
   )
+
+  // `data` is `null` until the request resolves and a destructuring default
+  // only covers `undefined`, so `related.length` below would read off null on
+  // the render that follows the service arriving.
+  const related = relatedData ?? []
 
   useDocumentTitle(service?.name ?? 'Service')
 

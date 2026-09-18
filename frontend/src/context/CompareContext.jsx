@@ -56,6 +56,18 @@ export function CompareProvider({ children }) {
     toast.info('Comparison cleared')
   }, [reset, toast])
 
+  /** Drops compared ids whose vehicle is no longer in the inventory. Silent,
+   *  for the same reason `pruneFavorites` is — see the note there. */
+  const pruneCompare = useCallback(
+    (validIds) => {
+      const valid = new Set(validIds)
+      const missing = compareIds.filter((id) => !valid.has(id))
+      if (missing.length === 0) return
+      setCompareIds(compareIds.filter((id) => valid.has(id)))
+    },
+    [compareIds, setCompareIds],
+  )
+
   const value = useMemo(
     () => ({
       compareIds,
@@ -65,6 +77,7 @@ export function CompareProvider({ children }) {
       toggleCompare,
       removeCompare,
       clearCompare,
+      pruneCompare,
     }),
     [
       compareIds,
@@ -72,6 +85,7 @@ export function CompareProvider({ children }) {
       toggleCompare,
       removeCompare,
       clearCompare,
+      pruneCompare,
     ],
   )
 

@@ -57,10 +57,15 @@ export default function JobDetails() {
     slug,
   )
 
-  const { data: related = [], loading: relatedLoading } = useAsync(
+  const { data: relatedData, loading: relatedLoading } = useAsync(
     () => getRelatedJobs(slug, 2),
     slug,
   )
+
+  // `data` is `null` until the request resolves and a destructuring default
+  // only covers `undefined`, so `related.length` below would read off null on
+  // the render that follows the job arriving.
+  const related = relatedData ?? []
 
   useDocumentTitle(job?.title ?? 'Job')
 
