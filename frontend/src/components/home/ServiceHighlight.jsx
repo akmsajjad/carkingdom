@@ -55,7 +55,7 @@ export default function ServiceHighlight() {
                 />
               </span>
 
-              <h3 className="mt-4 text-base font-semibold">
+              <h3 className="mt-4 text-base font-semibold text-white">
                 <Link
                   to={`/services/${service.slug}`}
                   className="rounded-sm after:absolute after:inset-0 after:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500"

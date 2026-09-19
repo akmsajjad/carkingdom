@@ -52,29 +52,35 @@ const HIRING_STEPS = [
 export default function JobDetails() {
   const { slug } = useParams()
 
-  const { data: job, loading, error, reload } = useAsync(
+  const { data: job, loading, error, stale, reload } = useAsync(
     () => getJobBySlug(slug),
     slug,
   )
 
-  const { data: relatedData, loading: relatedLoading } = useAsync(
-    () => getRelatedJobs(slug, 2),
-    slug,
-  )
+  const {
+    data: relatedData,
+    loading: relatedLoading,
+    stale: relatedStale,
+  } = useAsync(() => getRelatedJobs(slug, 2), slug)
 
   // `data` is `null` until the request resolves and a destructuring default
   // only covers `undefined`, so `related.length` below would read off null on
-  // the render that follows the job arriving.
-  const related = relatedData ?? []
+  // the render that follows the job arriving. The `stale` half is the same
+  // problem as the page's own fetch: the previous role's cards would still be
+  // listed under the new one.
+  const related = relatedStale ? [] : (relatedData ?? [])
 
   useDocumentTitle(job?.title ?? 'Job')
 
   // Held until the posting has arrived: the `#apply` section is rendered from
   // `job`, so before the request resolves there is nothing to scroll to. See the
   // note in `useHashScroll` about why `ScrollToTop` alone is not enough here.
-  useHashScroll(Boolean(job))
+  // `!stale` because a job left over from the previous slug is not "arrived"
+  // — scrolling on its contents would land the visitor on the wrong posting's
+  // application section.
+  useHashScroll(Boolean(job) && !stale)
 
-  if (loading && !job) {
+  if ((loading && !job) || stale) {
     return (
       <div className="container-page py-20">
         <LoadingBlock label="Loading this role…" />
@@ -242,7 +248,9 @@ export default function JobDetails() {
           </div>
         </section>
 
-        {related.length > 0 && (
+        {/* The loading state is part of the condition, not just the count —
+            see the same note on the service page. */}
+        {(relatedLoading || relatedStale || related.length > 0) && (
           <section className="mt-16">
             <div className="flex flex-wrap items-end justify-between gap-4">
               <h2 className="text-xl font-bold text-brand-900">
@@ -258,7 +266,7 @@ export default function JobDetails() {
 
             <JobGrid
               jobs={related}
-              loading={relatedLoading}
+              loading={relatedLoading || relatedStale}
               skeletonCount={2}
               className="mt-8"
             />

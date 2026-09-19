@@ -66,7 +66,11 @@ export default function PageHeader({
             )}
             <h1
               className={cn(
-                'text-3xl font-bold tracking-tight sm:text-4xl',
+                // Explicit, because the `h1`-`h4` colour in `index.css` is set
+                // on the element and so outranks the `text-white` this header
+                // would otherwise pass down. Without it every page title in the
+                // app renders near-black on the graphite band.
+                'text-3xl font-bold tracking-tight text-white sm:text-4xl',
                 eyebrow && 'mt-2',
               )}
             >

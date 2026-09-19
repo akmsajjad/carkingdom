@@ -30,6 +30,23 @@ import { useCart } from '../../context/CartContext'
  * page is scrolled so the bar that stays on screen is only the 72px one. That
  * keeps the phone number reachable at the top of every page without paying for
  * its height while reading.
+ *
+ * ## Why the header is dark
+ *
+ * The logo artwork is drawn in near-white — its wordmark and hexagon are around
+ * #fcfcfc — so on the white bar this used to be, the wordmark and the hexagon
+ * were invisible and only the red car showed. The mark needs a dark ground, so
+ * the bar is graphite and the artwork, the nav links and the icons are all
+ * light on it. The footer is dark for the same reason.
+ *
+ * The two rows stay distinguishable by a step in the graphite ramp rather than
+ * a border: the strip is brand-950 and the bar brand-900, so the bar reads as
+ * the nearer surface. A divider line between two near-black bands would have to
+ * be either invisible or brighter than both.
+ *
+ * The bar keeps its 72px height (`h-header`) exactly. That is deliberate: a
+ * dozen components position themselves against it with `top-24` and
+ * `scroll-mt-*`, and every one of those would be wrong the moment it grew.
  */
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -82,7 +99,7 @@ export default function Navbar() {
 
       <div
         className={cn(
-          'border-b border-slate-200 bg-white/95 backdrop-blur-sm transition-shadow',
+          'border-b border-white/10 bg-brand-900 transition-shadow',
           scrolled && 'shadow-header',
         )}
       >
@@ -98,10 +115,13 @@ export default function Navbar() {
                     end={link.to === '/'}
                     className={({ isActive }) =>
                       cn(
-                        'rounded-lg px-3 py-2 text-sm transition-colors',
+                        // `whitespace-nowrap` stays even though the row has
+                        // room again: it is what turns a future squeeze into a
+                        // caught overflow rather than a silently wrapped label.
+                        'rounded-lg px-3 py-2 text-sm whitespace-nowrap transition-colors',
                         isActive
-                          ? 'bg-brand-50 font-semibold text-brand-900'
-                          : 'font-medium text-slate-600 hover:bg-slate-100 hover:text-brand-900',
+                          ? 'bg-white/10 font-semibold text-white'
+                          : 'font-medium text-slate-300 hover:bg-white/10 hover:text-white',
                       )
                     }
                   >
@@ -142,13 +162,33 @@ export default function Navbar() {
               count={itemCount}
             />
 
+            {/* The rule divides the icon cluster from the button cluster, so it
+                appears with the buttons rather than at `lg`. Showing it a
+                breakpoint early would leave a divider floating in front of
+                nothing. */}
             <span
               aria-hidden="true"
-              className="mx-2 hidden h-6 w-px bg-slate-200 lg:block"
+              className="mx-2 hidden h-6 w-px bg-white/15 xl:block"
             />
 
-            <div className="hidden lg:block">
-              <Button to="/used-cars" variant="primary" size="sm" icon={Car}>
+            {/* The buttons start at `xl`, not `lg`.
+                At 1024px the row has to hold the logo, seven nav links, three
+                icon links and a button, and it does not: measured, that is
+                roughly 1000px of content in the 960px a 1024px viewport leaves
+                after the page gutters, so the header overflowed from `lg` until
+                there was room for it around 1150px.
+                Nothing is lost by waiting. "Browse Cars" is the same
+                destination as the "Used Cars" nav link sitting a few
+                centimetres to its left, so between 1024 and 1280 the header
+                still carries a complete, unambiguous route into the inventory
+                — and it does so without the row visibly straining. */}
+            {/* `white`, not `primary`. The primary variant is `bg-brand-900`,
+                which is now the bar's own colour — the button would be a
+                graphite rectangle on graphite, with only its label visible.
+                A white fill keeps the pair's hierarchy: one solid button and
+                one red one, exactly as before. */}
+            <div className="hidden xl:block">
+              <Button to="/used-cars" variant="white" size="sm" icon={Car}>
                 Browse Cars
               </Button>
             </div>
@@ -168,8 +208,10 @@ export default function Navbar() {
               type="button"
               onClick={() => setMenuOpen(true)}
               aria-label="Open menu"
+              aria-haspopup="dialog"
+              aria-controls="mobile-nav"
               aria-expanded={menuOpen}
-              className="-mr-2 ml-1 inline-flex size-10 items-center justify-center rounded-lg text-brand-900 transition-colors hover:bg-slate-100 lg:hidden"
+              className="-mr-2 ml-1 inline-flex size-10 items-center justify-center rounded-lg text-white transition-colors hover:bg-white/10 lg:hidden"
             >
               <Menu className="size-5" aria-hidden="true" />
             </button>

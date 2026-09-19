@@ -65,7 +65,10 @@ export default function Contact() {
 
       <div className="container-page py-12 sm:py-16">
         <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-12">
-          <Card className="p-6 sm:p-8">
+          {/* The id is the target for the mobile bar's Message button while it
+              is already on this page — see `MobileCta`. `scroll-mt-24` keeps
+              the card clear of the sticky header when it is scrolled to. */}
+          <Card id="contact-form" className="scroll-mt-24 p-6 sm:p-8">
             <h2 className="text-xl font-bold text-brand-900">
               Send us a message
             </h2>
@@ -121,7 +124,7 @@ export default function Contact() {
               </p>
             </Card>
 
-            <Card className="bg-brand-50">
+            <Card tone="muted">
               <h2 className="text-sm font-semibold text-brand-900">
                 Sales, service or parts?
               </h2>

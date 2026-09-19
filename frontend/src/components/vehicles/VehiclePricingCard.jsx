@@ -65,9 +65,12 @@ export default function VehiclePricingCard({ vehicle, onAction, className }) {
           <p
             className={cn(
               'mt-3 rounded-lg px-3 py-2 text-sm font-medium',
+              // Amber for the pending notice, so it reads as a state that can
+              // still change rather than as another "sold" — the two panels
+              // were only distinguishable while the accent was gold.
               isSold
                 ? 'bg-red-50 text-red-700'
-                : 'bg-accent-50 text-accent-800',
+                : 'bg-amber-50 text-amber-900',
             )}
           >
             {isSold

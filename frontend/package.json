@@ -9,6 +9,7 @@
     "drive": "node scripts/drive.mjs",
     "lint": "oxlint",
     "images": "node scripts/generate-placeholders.mjs",
+    "logo": "node scripts/generate-logo-assets.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

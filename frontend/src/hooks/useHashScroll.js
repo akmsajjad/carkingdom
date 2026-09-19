@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
+import { scrollBehavior } from '../utils/scroll'
 
 /**
  * Scrolls to the element a `#fragment` names, once the page can honour it.
@@ -27,6 +28,6 @@ export default function useHashScroll(ready = true) {
     const target = document.getElementById(hash.slice(1))
     if (!target) return
 
-    target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    target.scrollIntoView({ behavior: scrollBehavior(), block: 'start' })
   }, [hash, ready])
 }

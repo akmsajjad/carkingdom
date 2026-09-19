@@ -1,4 +1,5 @@
 import { useId } from 'react'
+import { RotateCcw } from 'lucide-react'
 import Checkbox from './Checkbox'
 import Input from './Input'
 
@@ -48,6 +49,43 @@ export function LoneCheckbox({ checked, onChange, label }) {
   const id = useId()
 
   return <Checkbox id={id} checked={checked} onChange={onChange} label={label} />
+}
+
+/**
+ * Shown at the top of a filter panel when the options request failed.
+ *
+ * The facets come from a second request, separate from the results, and
+ * `FacetList` renders nothing for an empty list — so a failure there leaves the
+ * panel with headings and nothing underneath them. That reads as "this
+ * dealership stocks no Toyotas" rather than as a fault, which is the one
+ * reading a customer will act on. This says what actually happened.
+ *
+ * It sits above the controls rather than replacing them: search, sort and the
+ * mileage box are all driven from the URL and keep working, and the results
+ * list below is unaffected.
+ */
+export function FacetErrorNotice({ onRetry }) {
+  return (
+    <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+      <p className="text-sm font-semibold text-amber-900">
+        Filters didn&rsquo;t load
+      </p>
+      <p className="mt-1 text-sm leading-relaxed text-amber-800">
+        The list of makes, body types and price ranges is missing. Search and
+        sort still work.
+      </p>
+      {onRetry && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-2.5 inline-flex items-center gap-1.5 rounded-sm text-sm font-semibold text-amber-900 underline underline-offset-2 transition-colors hover:text-amber-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500"
+        >
+          <RotateCcw className="size-3.5" aria-hidden="true" />
+          Try again
+        </button>
+      )}
+    </div>
+  )
 }
 
 /**

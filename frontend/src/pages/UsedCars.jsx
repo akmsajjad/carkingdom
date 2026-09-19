@@ -12,6 +12,7 @@ import useDocumentTitle from '../hooks/useDocumentTitle'
 import useVehicleFilters, { FILTER_FIELDS } from '../hooks/useVehicleFilters'
 import { getVehicleFilterOptions, getVehicles } from '../services/vehicles'
 import { SORT_OPTIONS } from '../data/vehicles'
+import { scrollBehavior } from '../utils/scroll'
 
 export default function UsedCars() {
   useDocumentTitle('Used Cars for Sale')
@@ -43,7 +44,14 @@ export default function UsedCars() {
   )
 
   // Options and facet counts load once; only the results depend on the filters.
-  const { data: options } = useAsync(getVehicleFilterOptions, 'filter-options')
+  // Its failure is handled rather than ignored: the panel would otherwise
+  // render headings over empty lists, which looks like a dealership with no
+  // Toyotas rather than a request that did not come back.
+  const {
+    data: options,
+    error: optionsError,
+    reload: reloadOptions,
+  } = useAsync(getVehicleFilterOptions, 'filter-options')
 
   const vehicles = data?.results ?? []
   const total = data?.total ?? 0
@@ -55,7 +63,7 @@ export default function UsedCars() {
     setPage(next)
     // Jumping to page 6 from the bottom of the page otherwise leaves the user
     // looking at the footer of a list they have not seen the top of.
-    resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    resultsRef.current?.scrollIntoView({ behavior: scrollBehavior(), block: 'start' })
   }
 
   return (
@@ -72,6 +80,8 @@ export default function UsedCars() {
           <VehicleFilters
             filters={filters}
             options={options}
+            optionsError={optionsError}
+            onReloadOptions={reloadOptions}
             facets={data?.facets}
             activeCount={activeCount}
             onToggleArray={toggleArrayFilter}
@@ -97,6 +107,8 @@ export default function UsedCars() {
               sortLabel="Sort vehicles"
               onSetFilter={setFilter}
               onOpenFilters={() => setDrawerOpen(true)}
+              filtersPanelId="vehicle-filters"
+              filtersOpen={drawerOpen}
               activeCount={activeCount}
             />
 

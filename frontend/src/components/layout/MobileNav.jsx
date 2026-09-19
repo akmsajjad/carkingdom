@@ -40,10 +40,12 @@ export default function MobileNav({ open, onClose }) {
 
   return (
     <Drawer
+      id="mobile-nav"
       open={open}
       onClose={onClose}
       label="Main menu"
       side="right"
+      tone="dark"
       title={<Logo onClick={onClose} />}
     >
       <nav className="px-3 py-4">
@@ -55,33 +57,33 @@ export default function MobileNav({ open, onClose }) {
                 end={link.to === '/'}
                 className={({ isActive }) =>
                   cn(
-                    'flex items-center justify-between rounded-lg px-3 py-3 text-base font-medium transition-colors',
+                    'flex items-center justify-between rounded-lg px-3 py-3 text-base transition-colors',
                     isActive
-                      ? 'bg-brand-50 text-brand-900'
-                      : 'text-slate-700 hover:bg-slate-50 hover:text-brand-900',
+                      ? 'bg-white/10 font-semibold text-white'
+                      : 'font-medium text-slate-300 hover:bg-white/10 hover:text-white',
                   )
                 }
               >
                 {link.label}
-                <ChevronRight className="size-4 text-slate-400" aria-hidden="true" />
+                <ChevronRight className="size-4 text-slate-500" aria-hidden="true" />
               </NavLink>
             </li>
           ))}
         </ul>
 
-        <div className="my-4 border-t border-slate-200" />
+        <div className="my-4 border-t border-white/10" />
 
         <ul className="space-y-0.5">
           {shortcuts.map(({ to, icon: Icon, label, count }) => (
             <li key={to}>
               <Link
                 to={to}
-                className="flex items-center gap-3 rounded-lg px-3 py-3 text-base font-medium text-slate-700 transition-colors hover:bg-slate-50 hover:text-brand-900"
+                className="flex items-center gap-3 rounded-lg px-3 py-3 text-base font-medium text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
               >
                 <Icon className="size-5 text-slate-400" aria-hidden="true" />
                 {label}
                 {count > 0 && (
-                  <span className="ml-auto rounded-full bg-accent-500 px-2 py-0.5 text-xs font-bold text-brand-950 tabular-nums">
+                  <span className="ml-auto rounded-full bg-accent-600 px-2 py-0.5 text-xs font-bold text-white tabular-nums">
                     {count}
                   </span>
                 )}
@@ -90,23 +92,23 @@ export default function MobileNav({ open, onClose }) {
           ))}
         </ul>
 
-        <div className="my-4 border-t border-slate-200" />
+        <div className="my-4 border-t border-white/10" />
 
-        <div className="space-y-3 px-3 text-sm text-slate-600">
-          <a href={TEL_HREF} className="flex items-center gap-3 hover:text-brand-900">
-            <Phone className="size-4 shrink-0 text-accent-600" aria-hidden="true" />
+        <div className="space-y-3 px-3 text-sm text-slate-300">
+          <a href={TEL_HREF} className="flex items-center gap-3 hover:text-white">
+            <Phone className="size-4 shrink-0 text-accent-400" aria-hidden="true" />
             {SITE.phoneDisplay}
           </a>
-          <a href={MAILTO_HREF} className="flex items-center gap-3 hover:text-brand-900">
-            <Mail className="size-4 shrink-0 text-accent-600" aria-hidden="true" />
+          <a href={MAILTO_HREF} className="flex items-center gap-3 hover:text-white">
+            <Mail className="size-4 shrink-0 text-accent-400" aria-hidden="true" />
             {SITE.email}
           </a>
           <p className="flex items-start gap-3">
-            <MapPin className="mt-0.5 size-4 shrink-0 text-accent-600" aria-hidden="true" />
+            <MapPin className="mt-0.5 size-4 shrink-0 text-accent-400" aria-hidden="true" />
             {FULL_ADDRESS}
           </p>
           <p className="flex items-start gap-3">
-            <Clock className="mt-0.5 size-4 shrink-0 text-accent-600" aria-hidden="true" />
+            <Clock className="mt-0.5 size-4 shrink-0 text-accent-400" aria-hidden="true" />
             {SITE.hours[0].days}: {SITE.hours[0].time}
           </p>
         </div>

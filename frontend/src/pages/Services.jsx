@@ -5,7 +5,6 @@ import ErrorState from '../components/common/ErrorState'
 import OpeningHours from '../components/common/OpeningHours'
 import PageHeader from '../components/common/PageHeader'
 import SectionHeading from '../components/common/SectionHeading'
-import { LoadingBlock } from '../components/common/Spinner'
 import BookingSteps from '../components/appointments/BookingSteps'
 import ServiceCta from '../components/services/ServiceCta'
 import ServiceGrid from '../components/services/ServiceGrid'
@@ -57,9 +56,11 @@ export default function Services() {
           description="Mechanical repair, maintenance, tires, inspections and detailing. If it is not on this list, call us — we will tell you honestly whether it is a job for us."
         />
 
-        {loading && !services ? (
-          <LoadingBlock className="mt-10" label="Loading services…" />
-        ) : error ? (
+        {/* `loading` goes to the grid rather than branching here — the page
+            used a spinner above it, which made the grid's own
+            `skeletonCount` unreachable and left six service-card skeletons
+            that never rendered. See the same note on the careers page. */}
+        {error ? (
           <ErrorState
             className="mt-10"
             title="We couldn't load the service list"
@@ -71,8 +72,14 @@ export default function Services() {
         ) : (
           <ServiceGrid
             services={services ?? []}
+            loading={loading}
             skeletonCount={6}
             className="mt-10"
+            emptyAction={
+              <Button href={TEL_HREF} variant="outline" icon={PhoneCall}>
+                Call {SITE.phoneDisplay}
+              </Button>
+            }
           />
         )}
 
@@ -84,7 +91,7 @@ export default function Services() {
             <BookingSteps className="mt-6" />
           </Card>
 
-          <Card className="bg-slate-50">
+          <Card tone="subtle">
             <h2 className="text-xl font-bold text-brand-900">When we&rsquo;re open</h2>
             <OpeningHours className="mt-5" />
             <p className="mt-5 border-t border-slate-200 pt-5 text-sm leading-relaxed text-slate-600">

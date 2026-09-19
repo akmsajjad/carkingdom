@@ -72,3 +72,23 @@ export function careerImage(slug) {
 export function generalImage(slug) {
   return `/images/general/${slug}.svg`
 }
+
+/**
+ * Brand artwork.
+ *
+ * The logo is not a content image and is kept out of the category helpers
+ * above, because those exist to build paths from data — a vehicle slug, a part
+ * slug — and the logo has no slug. It is one fixed file, named here so the
+ * components that draw it do not carry paths.
+ *
+ * One file, not two: the master artwork is drawn in near-white — its wordmark
+ * and hexagon are around #fcfcfc — so it needs a dark ground, and every surface
+ * that shows it now has one. The header and footer are dark for exactly this
+ * reason, and the mobile navigation drawer is dark to match the header, so a
+ * light-ground variant would have no caller left.
+ *
+ * Generated from `scripts/assets/car-kingdom-logo.png` by `npm run logo`.
+ */
+export const BRAND_IMAGES = {
+  badgeOnDark: '/images/general/logo-full-on-dark.png',
+}

@@ -1,0 +1,177 @@
+{
+  "390": {
+    "immediate": {
+      "scrollY": 426,
+      "headerTop": 0,
+      "headerBottom": 73,
+      "headerHeight": 73,
+      "sectionTop": 99,
+      "sectionBottom": 1422,
+      "scrollMarginTop": "96px",
+      "paddingTop": "64px",
+      "hiddenBehindHeader": -26,
+      "heading": "Four vehicles and one rule"
+    },
+    "settled": {
+      "scrollY": 429,
+      "headerTop": 0,
+      "headerBottom": 73,
+      "headerHeight": 73,
+      "sectionTop": 96,
+      "sectionBottom": 1419,
+      "scrollMarginTop": "96px",
+      "paddingTop": "64px",
+      "hiddenBehindHeader": -23,
+      "heading": "Four vehicles and one rule"
+    },
+    "atTop": {
+      "height": 73,
+      "bottom": 73
+    },
+    "scrolledHeader": {
+      "height": 73,
+      "bottom": 73,
+      "scrollY": 4000
+    }
+  },
+  "768": {
+    "immediate": {
+      "scrollY": 351,
+      "headerTop": 0,
+      "headerBottom": 73,
+      "headerHeight": 73,
+      "sectionTop": 96,
+      "sectionBottom": 1311,
+      "scrollMarginTop": "96px",
+      "paddingTop": "80px",
+      "hiddenBehindHeader": -23,
+      "heading": "Four vehicles and one rule"
+    },
+    "settled": {
+      "scrollY": 351,
+      "headerTop": 0,
+      "headerBottom": 73,
+      "headerHeight": 73,
+      "sectionTop": 96,
+      "sectionBottom": 1311,
+      "scrollMarginTop": "96px",
+      "paddingTop": "80px",
+      "hiddenBehindHeader": -23,
+      "heading": "Four vehicles and one rule"
+    },
+    "atTop": {
+      "height": 73,
+      "bottom": 73
+    },
+    "scrolledHeader": {
+      "height": 73,
+      "bottom": 73,
+      "scrollY": 4000
+    }
+  },
+  "1024": {
+    "immediate": {
+      "scrollY": 323,
+      "headerTop": 0,
+      "headerBottom": 74,
+      "headerHeight": 74,
+      "sectionTop": 61,
+      "sectionBottom": 835,
+      "scrollMarginTop": "96px",
+      "paddingTop": "80px",
+      "hiddenBehindHeader": 13,
+      "heading": "Four vehicles and one rule"
+    },
+    "settled": {
+      "scrollY": 322,
+      "headerTop": 0,
+      "headerBottom": 73,
+      "headerHeight": 73,
+      "sectionTop": 61,
+      "sectionBottom": 835,
+      "scrollMarginTop": "96px",
+      "paddingTop": "80px",
+      "hiddenBehindHeader": 12,
+      "heading": "Four vehicles and one rule"
+    },
+    "atTop": {
+      "height": 109,
+      "bottom": 109
+    },
+    "scrolledHeader": {
+      "height": 73,
+      "bottom": 73,
+      "scrollY": 3902
+    }
+  },
+  "1280": {
+    "immediate": {
+      "scrollY": 322,
+      "headerTop": 0,
+      "headerBottom": 73,
+      "headerHeight": 73,
+      "sectionTop": 61,
+      "sectionBottom": 733,
+      "scrollMarginTop": "96px",
+      "paddingTop": "80px",
+      "hiddenBehindHeader": 12,
+      "heading": "Four vehicles and one rule"
+    },
+    "settled": {
+      "scrollY": 322,
+      "headerTop": 0,
+      "headerBottom": 73,
+      "headerHeight": 73,
+      "sectionTop": 61,
+      "sectionBottom": 733,
+      "scrollMarginTop": "96px",
+      "paddingTop": "80px",
+      "hiddenBehindHeader": 12,
+      "heading": "Four vehicles and one rule"
+    },
+    "atTop": {
+      "height": 109,
+      "bottom": 109
+    },
+    "scrolledHeader": {
+      "height": 73,
+      "bottom": 73,
+      "scrollY": 3714
+    }
+  },
+  "1440": {
+    "immediate": {
+      "scrollY": 321,
+      "headerTop": 0,
+      "headerBottom": 75,
+      "headerHeight": 75,
+      "sectionTop": 64,
+      "sectionBottom": 736,
+      "scrollMarginTop": "96px",
+      "paddingTop": "80px",
+      "hiddenBehindHeader": 11,
+      "heading": "Four vehicles and one rule"
+    },
+    "settled": {
+      "scrollY": 321,
+      "headerTop": 0,
+      "headerBottom": 73,
+      "headerHeight": 73,
+      "sectionTop": 62,
+      "sectionBottom": 734,
+      "scrollMarginTop": "96px",
+      "paddingTop": "80px",
+      "hiddenBehindHeader": 11,
+      "heading": "Four vehicles and one rule"
+    },
+    "atTop": {
+      "height": 109,
+      "bottom": 109
+    },
+    "scrolledHeader": {
+      "height": 73,
+      "bottom": 73,
+      "scrollY": 3719
+    }
+  }
+}

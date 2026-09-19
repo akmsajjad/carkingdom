@@ -27,8 +27,21 @@ import {
  * is a property of the fitment catalogue and not of the part object. That is
  * also what makes it survive the move to Django: the endpoint does the work.
  */
+/**
+ * The three messages this panel can fail with. Each names what could not be
+ * done, because "something went wrong" beside a parts catalogue leaves the
+ * customer with no idea whether the part fits.
+ */
+const LOAD_ERROR =
+  'The vehicle list did not load. Reload the page, or call the parts counter and we will look it up for you.'
+const CASCADE_ERROR =
+  'That vehicle list did not load. Try another make, or call the parts counter with your VIN.'
+const CHECK_ERROR =
+  'The fitment check did not run. Try again, or call the parts counter and we will match it for you.'
+
 export default function FitmentChecker({ part, className }) {
   const [makes, setMakes] = useState([])
+  const [makesLoading, setMakesLoading] = useState(true)
   const [models, setModels] = useState([])
   const [years, setYears] = useState([])
 
@@ -37,13 +50,27 @@ export default function FitmentChecker({ part, className }) {
   const [year, setYear] = useState('')
 
   const [result, setResult] = useState(null)
+  const [error, setError] = useState(null)
   const [checking, setChecking] = useState(false)
 
+  // The make list is the one request this panel makes on its own. It is caught
+  // rather than left to reject: an empty select and an unreachable one look
+  // identical, so without this the panel reads as a catalogue with no makes in
+  // it, which is a statement about the shop rather than about a request.
   useEffect(() => {
     let cancelled = false
-    getFitmentMakes().then((list) => {
-      if (!cancelled) setMakes(list)
-    })
+
+    getFitmentMakes()
+      .then((list) => {
+        if (!cancelled) setMakes(list)
+      })
+      .catch(() => {
+        if (!cancelled) setError(LOAD_ERROR)
+      })
+      .finally(() => {
+        if (!cancelled) setMakesLoading(false)
+      })
+
     return () => {
       cancelled = true
     }
@@ -55,26 +82,65 @@ export default function FitmentChecker({ part, className }) {
     setYear('')
     setYears([])
     setResult(null)
-    setModels(value ? await getFitmentModels(value) : [])
+    setError(null)
+
+    if (!value) {
+      setModels([])
+      return
+    }
+
+    try {
+      setModels(await getFitmentModels(value))
+    } catch {
+      // Cleared rather than left alone. The combination this panel exists to
+      // prevent — a Toyota make over a list of Ford models — is precisely what
+      // a failed request would otherwise leave on screen, because `setMake`
+      // has already run and the previous model list is still in state.
+      setModels([])
+      setError(CASCADE_ERROR)
+    }
   }
 
   const handleModel = async (value) => {
     setModel(value)
     setYear('')
     setResult(null)
-    setYears(value ? await getFitmentYears(make, value) : [])
+    setError(null)
+
+    if (!value) {
+      setYears([])
+      return
+    }
+
+    try {
+      setYears(await getFitmentYears(make, value))
+    } catch {
+      setYears([])
+      setError(CASCADE_ERROR)
+    }
   }
 
   const handleYear = (value) => {
     setYear(value)
     setResult(null)
+    setError(null)
   }
 
   const handleSubmit = async (event) => {
     event.preventDefault()
     setChecking(true)
+    setError(null)
+
     try {
       setResult(await checkFitment(part.slug, { make, model, year }))
+    } catch {
+      // The verdict is cleared before the error is shown. Leaving the previous
+      // one up is the dangerous outcome here: the customer changes the year,
+      // the check fails, and a confident "Fits your vehicle" from the *old*
+      // year is still sitting under the form. There is no way to tell it apart
+      // from a fresh answer.
+      setResult(null)
+      setError(CHECK_ERROR)
     } finally {
       setChecking(false)
     }
@@ -109,8 +175,12 @@ export default function FitmentChecker({ part, className }) {
               id={id}
               value={make}
               onChange={(event) => handleMake(event.target.value)}
-              placeholder="Select a make"
+              // "Loading makes…" rather than the empty placeholder, so an
+              // in-flight request is not mistaken for a list with nothing in
+              // it — the same confusion the error message above prevents.
+              placeholder={makesLoading ? 'Loading makes…' : 'Select a make'}
               options={makes}
+              disabled={makesLoading}
             />
           )}
         </Field>
@@ -152,6 +222,21 @@ export default function FitmentChecker({ part, className }) {
           the customer just pressed, and without it a screen-reader user gets
           no indication that anything happened. */}
       <div aria-live="polite" className="mt-4">
+        {error && (
+          <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 p-3.5 text-sm text-amber-900">
+            <TriangleAlert
+              className="mt-0.5 size-4 shrink-0 text-amber-600"
+              aria-hidden="true"
+            />
+            <div>
+              <p className="font-semibold">
+                We couldn&rsquo;t complete the check
+              </p>
+              <p className="mt-0.5">{error}</p>
+            </div>
+          </div>
+        )}
+
         {result && (
           <div
             className={cn(

@@ -31,9 +31,32 @@ export default function Cart() {
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [fulfilment, setFulfilment] = useState('pickup')
 
+  /**
+   * Set when the counter request has actually gone through, so the cart can be
+   * emptied on the way out rather than in the moment it succeeds.
+   *
+   * The clearing has to wait for the close. Emptying it the instant the
+   * request lands would trip the `isEmpty` early return at the top of this
+   * component, which would unmount the dialog — and the confirmation inside it
+   * — leaving the customer on an empty cart with no idea whether their order
+   * was sent. So the order is recorded now and acted on at `closeCheckout`,
+   * which every exit route goes through: the Done button, Cancel, the close
+   * icon, Escape and the backdrop.
+   */
+  const [orderPlaced, setOrderPlaced] = useState(false)
+
   const handleCheckout = (choice) => {
     setFulfilment(choice)
     setCheckoutOpen(true)
+  }
+
+  const closeCheckout = () => {
+    setCheckoutOpen(false)
+
+    if (orderPlaced) {
+      clearCart()
+      setOrderPlaced(false)
+    }
   }
 
   if (isEmpty) {
@@ -122,7 +145,7 @@ export default function Cart() {
 
       <Modal
         open={checkoutOpen}
-        onClose={() => setCheckoutOpen(false)}
+        onClose={closeCheckout}
         title="Send this order to the counter"
         description="We will call you to confirm stock, fitment and payment. Nothing is charged online."
         size="lg"
@@ -130,11 +153,8 @@ export default function Cart() {
         <CheckoutForm
           items={items}
           fulfilment={fulfilment}
-          onCancel={() => setCheckoutOpen(false)}
-          onPlaced={() => {
-            setCheckoutOpen(false)
-            clearCart()
-          }}
+          onSuccess={() => setOrderPlaced(true)}
+          onClose={closeCheckout}
         />
       </Modal>
     </>

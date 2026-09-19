@@ -3,12 +3,18 @@ import { cn } from '../../utils/cn'
 /**
  * Shown when a list or collection is legitimately empty. Always offers a way
  * out — an empty state without a next action is a dead end.
+ *
+ * `as` defaults to `h2` because these replace a page's main content, directly
+ * under its `h1`. It is overridable for the rare nesting where a heading
+ * already sits above it. It used to be a hard-coded `h3`, which skipped a
+ * level on every page that used it.
  */
 export default function EmptyState({
   icon: Icon,
   title,
   description,
   action,
+  as: Heading = 'h2',
   className,
 }) {
   return (
@@ -23,7 +29,7 @@ export default function EmptyState({
           <Icon className="size-7 text-slate-400" aria-hidden="true" />
         </span>
       )}
-      <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
+      <Heading className="text-lg font-semibold text-slate-900">{title}</Heading>
       {description && (
         <p className="mt-2 max-w-md text-sm text-slate-500">{description}</p>
       )}

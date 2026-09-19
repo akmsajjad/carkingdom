@@ -11,11 +11,11 @@ import { MAILTO_HREF, SITE, TEL_HREF } from '../../data/site'
  */
 export default function CtaBanner() {
   return (
-    <section className="bg-accent-500">
+    <section className="bg-accent-600">
       <div className="container-page py-12 sm:py-16">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
-          <div className="max-w-2xl text-brand-950">
-            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+          <div className="max-w-2xl text-white">
+            <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
               Not sure what you are looking for yet?
             </h2>
             <p className="mt-3 leading-relaxed">

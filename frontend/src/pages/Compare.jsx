@@ -32,6 +32,7 @@ export default function Compare() {
     data,
     loading,
     error,
+    stale,
     reload,
   } = useAsync(() => getVehiclesByIds(compareIds), compareIds.join(','))
 
@@ -49,10 +50,16 @@ export default function Compare() {
 
   // Same reason as the saved list: a compared vehicle that has left the lot
   // comes back missing, and the header badge would keep counting it.
+  //
+  // `stale` is part of the guard, not just `loading`. There is one render
+  // between the ids changing and the request starting where `loading` is still
+  // false while `data` is the *previous* set — and pruning against that set
+  // deletes the vehicle the visitor has just added, before the request that
+  // would have confirmed it has even gone out.
   useEffect(() => {
-    if (loading || error) return
+    if (loading || stale || error) return
     pruneCompare(vehicles.map((vehicle) => vehicle.id))
-  }, [loading, error, vehicles, pruneCompare])
+  }, [loading, stale, error, vehicles, pruneCompare])
 
   const canCompare = vehicles.length >= 2
 
@@ -86,7 +93,7 @@ export default function Compare() {
             }
             onRetry={reload}
           />
-        ) : loading && vehicles.length === 0 ? (
+        ) : (loading && vehicles.length === 0) || stale ? (
           <LoadingBlock label="Loading your comparison…" />
         ) : !canCompare ? (
           <EmptyState

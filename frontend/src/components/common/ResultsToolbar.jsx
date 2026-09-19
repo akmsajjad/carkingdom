@@ -74,6 +74,8 @@ export default function ResultsToolbar({
   sortLabel = 'Sort results',
   onSetFilter,
   onOpenFilters,
+  filtersPanelId,
+  filtersOpen = false,
   activeCount = 0,
   className,
 }) {
@@ -141,6 +143,14 @@ export default function ResultsToolbar({
             size="sm"
             icon={SlidersHorizontal}
             onClick={onOpenFilters}
+            // The button opens a `role="dialog"` drawer, so it says so, and it
+            // reports whether that drawer is currently open — without
+            // `aria-expanded` a screen-reader user gets no confirmation that
+            // the press did anything, because the panel that appeared is
+            // outside their reading position.
+            aria-haspopup="dialog"
+            aria-controls={filtersPanelId}
+            aria-expanded={filtersOpen}
           >
             Filters
             {activeCount > 0 && (

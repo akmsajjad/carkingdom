@@ -1,7 +1,7 @@
 import { RotateCcw } from 'lucide-react'
 import Button from '../common/Button'
 import Drawer from '../common/Drawer'
-import FacetList, { LoneCheckbox, RangeInputs } from '../common/Facets'
+import FacetList, { FacetErrorNotice, LoneCheckbox, RangeInputs } from '../common/Facets'
 import FilterSection from '../common/FilterSection'
 import Input from '../common/Input'
 import { formatPrice } from '../../utils/format'
@@ -20,6 +20,8 @@ import { formatPrice } from '../../utils/format'
 export default function VehicleFilters({
   filters,
   options,
+  optionsError = null,
+  onReloadOptions,
   facets,
   activeCount = 0,
   onToggleArray,
@@ -50,6 +52,12 @@ export default function VehicleFilters({
           </button>
         )}
       </div>
+
+      {optionsError && (
+        <div className="pb-1">
+          <FacetErrorNotice onRetry={onReloadOptions} />
+        </div>
+      )}
 
       <FilterSection title="Price" defaultOpen>
         <RangeInputs
@@ -176,6 +184,7 @@ export default function VehicleFilters({
       </aside>
 
       <Drawer
+        id="vehicle-filters"
         open={open}
         onClose={onClose}
         label="Vehicle filters"

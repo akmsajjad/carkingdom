@@ -29,8 +29,11 @@ export default function Rating({
             aria-hidden="true"
             className={cn(
               sizes[size],
+              // Amber, not the brand accent: a gold star is a convention of its
+              // own and reads as a rating. Painted in the brand red it would
+              // look like a warning, which is the opposite of the message.
               i < rounded
-                ? 'fill-accent-500 text-accent-500'
+                ? 'fill-amber-400 text-amber-400'
                 : 'fill-slate-200 text-slate-200',
             )}
           />

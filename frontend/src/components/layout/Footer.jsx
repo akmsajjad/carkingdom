@@ -20,7 +20,8 @@ export default function Footer() {
       <div className="container-page py-14 lg:py-16">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-12 lg:gap-8">
           <div className="lg:col-span-4">
-            <Logo variant="light" />
+            {/* The whole badge, which carries its own wordmark — see `Logo`. */}
+            <Logo size="footer" />
 
             <p className="mt-5 max-w-xs text-sm leading-relaxed text-slate-400">
               {SITE.tagline}

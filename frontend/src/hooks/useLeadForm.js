@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useToast } from '../context/ToastContext'
 
 /**
@@ -12,9 +12,27 @@ import { useToast } from '../context/ToastContext'
  * Validation runs on submit rather than on every keystroke. Complaining that an
  * email address is invalid while it is still being typed is the most common way
  * a form becomes irritating.
+ *
+ * `onSuccess` is optional and fires once the submit has actually gone through,
+ * after the success state is set. Only the parts checkout needs it — see the
+ * note on `CheckoutForm` about why "the order exists" and "the customer is done
+ * reading the confirmation" are different moments. It is read through a ref so
+ * an inline arrow at the call site does not rebuild `handleSubmit` on every
+ * render.
  */
-export default function useLeadForm({ initialValues, validate, onSubmit, successMessage }) {
+export default function useLeadForm({
+  initialValues,
+  validate,
+  onSubmit,
+  successMessage,
+  onSuccess,
+}) {
   const toast = useToast()
+
+  const onSuccessRef = useRef(onSuccess)
+  useEffect(() => {
+    onSuccessRef.current = onSuccess
+  })
 
   const [values, setValues] = useState(initialValues)
   const [errors, setErrors] = useState({})
@@ -63,6 +81,7 @@ export default function useLeadForm({ initialValues, validate, onSubmit, success
         await onSubmit(values)
         setSubmitted(true)
         toast.success(successMessage)
+        onSuccessRef.current?.()
       } catch (error) {
         toast.error(
           error?.message ||

@@ -32,14 +32,20 @@ export default function Field({
         <label htmlFor={id} className={labelClasses}>
           {label}
           {required && (
-            <span className="ml-0.5 text-red-500" aria-hidden="true">
-              *
-            </span>
+            <>
+              {/* The asterisk is decoration; this is what actually tells a
+                  screen reader the field is required. Without it the control
+                  announces as an ordinary input on every form in the site. */}
+              <span className="sr-only"> (required)</span>
+              <span className="ml-0.5 text-red-500" aria-hidden="true">
+                *
+              </span>
+            </>
           )}
         </label>
       )}
 
-      {children({ id, describedBy, invalid: Boolean(error) })}
+      {children({ id, describedBy, invalid: Boolean(error), required })}
 
       {hint && !error && (
         <p id={hintId} className={hintClasses}>
@@ -47,7 +53,10 @@ export default function Field({
         </p>
       )}
       {error && (
-        <p id={errorId} className={errorClasses}>
+        // A field error appears in response to a submit the user just made, so
+        // it has to announce itself — the summary at the top of the form is
+        // not necessarily where attention is.
+        <p id={errorId} className={errorClasses} role="alert">
           {error}
         </p>
       )}

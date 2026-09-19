@@ -1,5 +1,6 @@
 import { CarFront, Phone, Search } from 'lucide-react'
 import Button from '../components/common/Button'
+import useDocumentTitle from '../hooks/useDocumentTitle'
 import { TEL_HREF, SITE } from '../data/site'
 
 /**
@@ -8,6 +9,13 @@ import { TEL_HREF, SITE } from '../data/site'
  * inventory, the phone number, and a way back to the start.
  */
 export default function NotFound() {
+  // Every other page sets its own title. Without this one the tab keeps
+  // whatever the previous page set — so a dead link from the inventory reads
+  // "Used Cars — Car Kingdom" over a page saying the car does not exist, and
+  // the history entry the visitor leaves behind is labelled with a page they
+  // never actually saw.
+  useDocumentTitle('Page not found')
+
   return (
     <div className="container-page py-20 lg:py-28">
       <div className="mx-auto flex max-w-lg flex-col items-center text-center">
@@ -19,7 +27,7 @@ export default function NotFound() {
           Error 404
         </p>
         <h1 className="mt-3 text-3xl font-bold text-brand-950 sm:text-4xl">
-          This page took a wrong turn
+          Looks like you&rsquo;ve taken a wrong turn
         </h1>
         <p className="mt-4 text-base leading-relaxed text-slate-600">
           The page you were looking for does not exist or has been moved. The
@@ -31,7 +39,7 @@ export default function NotFound() {
             Back to home
           </Button>
           <Button to="/used-cars" variant="outline" size="lg" icon={Search}>
-            Browse inventory
+            Browse cars
           </Button>
         </div>
 

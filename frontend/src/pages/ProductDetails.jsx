@@ -61,7 +61,7 @@ function BuyBox({ part }) {
         {part.inStock ? (
           part.stock <= 4 ? (
             <span className="font-medium text-amber-700">
-              Only {part.stock} left at the Dudley Street counter
+              Only {part.stock} left at the parts counter
             </span>
           ) : (
             <span className="font-medium text-emerald-700">
@@ -141,24 +141,27 @@ function BuyBox({ part }) {
 export default function ProductDetails() {
   const { slug } = useParams()
 
-  const { data: part, loading, error, reload } = useAsync(
+  const { data: part, loading, error, stale, reload } = useAsync(
     () => getPartBySlug(slug),
     slug,
   )
 
-  const { data: relatedData, loading: relatedLoading } = useAsync(
-    () => getRelatedParts(slug, 3),
-    slug,
-  )
+  const {
+    data: relatedData,
+    loading: relatedLoading,
+    stale: relatedStale,
+  } = useAsync(() => getRelatedParts(slug, 3), slug)
 
   // `data` is `null` until the request resolves and a destructuring default
   // only covers `undefined`, so `related.length` below would read off null on
-  // the render that follows the part arriving.
-  const related = relatedData ?? []
+  // the render that follows the part arriving. The `stale` half is the same
+  // problem as the page's own fetch: the previous part's cards would still be
+  // listed under the new one.
+  const related = relatedStale ? [] : (relatedData ?? [])
 
   useDocumentTitle(part?.name ?? 'Part details')
 
-  if (loading && !part) {
+  if ((loading && !part) || stale) {
     return (
       <div className="container-page py-20">
         <LoadingBlock label="Loading this part…" />
@@ -352,7 +355,7 @@ export default function ProductDetails() {
 
         <RelatedParts
           parts={related}
-          loading={relatedLoading}
+          loading={relatedLoading || relatedStale}
           className="mt-16"
         />
       </div>

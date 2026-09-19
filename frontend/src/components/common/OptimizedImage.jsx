@@ -9,12 +9,20 @@ import { getFallback } from '../../utils/images'
  * requested image -> category fallback -> nothing (alt text remains readable).
  * Without the intermediate step a single missing file would leave a broken
  * image icon on an otherwise finished-looking page.
+ *
+ * `fit` exists for the logo, which is the one image whose box does not match
+ * its artwork's proportions — `object-cover` would crop a wordmark in half. It
+ * is a prop rather than something callers pass through `className` because
+ * `cn` is a plain join, not tailwind-merge: `object-cover` and `object-contain`
+ * on the same element would both be present and the winner would be decided by
+ * stylesheet order, not by which one the caller wrote last.
  */
 export default function OptimizedImage({
   src,
   alt = '',
   category = 'general',
   eager = false,
+  fit = 'cover',
   className,
   ...props
 }) {
@@ -36,7 +44,11 @@ export default function OptimizedImage({
       decoding="async"
       fetchPriority={eager ? 'high' : 'auto'}
       onError={() => setFailedSrc(requested)}
-      className={cn('h-full w-full object-cover', className)}
+      className={cn(
+        'h-full w-full',
+        fit === 'contain' ? 'object-contain' : 'object-cover',
+        className,
+      )}
       {...props}
     />
   )

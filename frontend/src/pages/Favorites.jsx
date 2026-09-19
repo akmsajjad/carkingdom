@@ -31,15 +31,24 @@ export default function Favorites() {
     data,
     loading,
     error,
+    stale,
     reload,
   } = useAsync(() => getVehiclesByIds(favoriteIds), favoriteIds.join(','))
 
   // `data` is `null` until the request resolves, and a destructuring default
   // only covers `undefined` — so the coercion has to happen here rather than in
-  // the line above. Memoized so the identity is stable: the prune effect below
-  // depends on it, and a fresh `[]` on every render would re-run the effect for
-  // as long as the request is in flight.
-  const vehicles = useMemo(() => data ?? [], [data])
+  // the line above.
+  //
+  // Filtered against the ids that are saved *now*, so unsaving a vehicle from
+  // this page removes its row immediately instead of leaving it on screen
+  // until the refetch lands. `useAsync` keeps the previous response while the
+  // next one is in flight, and on this page the previous response still
+  // contains the vehicle the visitor just removed. The filter can only ever
+  // narrow the list, never invent a row, so what is left is always truthful.
+  const vehicles = useMemo(
+    () => (data ?? []).filter((vehicle) => favoriteIds.includes(vehicle.id)),
+    [data, favoriteIds],
+  )
 
   /**
    * Drops saved ids the inventory no longer has.
@@ -50,9 +59,13 @@ export default function Favorites() {
    * is the right place to notice.
    */
   useEffect(() => {
-    if (loading || error) return
+    // `stale` for the same reason as on the compare page: there is a render
+    // between the saved ids changing and the request starting where `loading`
+    // is still false and `data` is the previous set, and pruning against that
+    // set would drop the vehicle just saved.
+    if (loading || stale || error) return
     pruneFavorites(vehicles.map((vehicle) => vehicle.id))
-  }, [loading, error, vehicles, pruneFavorites])
+  }, [loading, stale, error, vehicles, pruneFavorites])
 
   const canCompare = vehicles.length >= 2
 

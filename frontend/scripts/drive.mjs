@@ -210,7 +210,11 @@ const PAGE_PROBE = `(() => {
     url: location.pathname + location.search,
     h1: t('h1'),
     header: !!document.querySelector('header'),
-    footer: !!document.querySelector('footer'),
+    // The shell footer, not a testimonial card's - those use a real footer
+    // element too and would satisfy a bare querySelector on the home page.
+    footer: [...document.querySelectorAll('footer')].some(
+      (f) => !f.closest('main'),
+    ),
     navLinks: [...document.querySelectorAll('header nav a')].map(a => a.textContent.trim()),
     mainText: (document.querySelector('main')?.innerText ?? '').slice(0, 160),
     imgCount: document.querySelectorAll('img').length,
@@ -4448,7 +4452,12 @@ async function main() {
         const bar = [...document.querySelectorAll('main > div')].find(
           (d) => getComputedStyle(d).position === 'sticky',
         )
-        const footer = document.querySelector('footer')
+        // A testimonial card uses a real <footer> for its attribution, so
+        // querySelector would return that one on any page carrying the
+        // testimonials section. The page footer is the one outside main.
+        const footer = [...document.querySelectorAll('footer')]
+          .filter((f) => !f.closest('main'))
+          .pop()
         const visible = !!bar && getComputedStyle(bar).display !== 'none'
           && bar.getBoundingClientRect().height > 0
 
@@ -4490,6 +4499,146 @@ async function main() {
       problems.push('Action bar: still visible on desktop')
     }
     if (row.overflowX) problems.push(`Action bar: horizontal overflow at ${width}`)
+  }
+
+  console.log('\n================ MOBILE CTA ================')
+  // The global bottom bar. It is fixed, not sticky, so the property that
+  // matters is that the shell reserves exactly its height and the footer stays
+  // clear behind it — and that a page pinning its own bar does not end up with
+  // two stacked.
+  for (const { path, width, expectBar, ownCta, ownCtaAbsent } of [
+    { path: '/', width: 390, expectBar: true },
+    { path: '/used-cars', width: 390, expectBar: true },
+    {
+      path: '/used-cars/2024-toyota-camry-se',
+      width: 390,
+      expectBar: false,
+      ownCta: 'Test drive',
+    },
+    // The sold vehicle's own bar. It used to offer a test drive on phones while
+    // the desktop header and the pricing card both withheld it, so the one
+    // screen where the customer could act was the one route to booking a car
+    // that had already gone.
+    {
+      path: '/used-cars/2021-toyota-corolla-le',
+      width: 390,
+      expectBar: false,
+      ownCta: 'Browse',
+      ownCtaAbsent: 'Test drive',
+    },
+    { path: '/', width: 1280, expectBar: false },
+  ]) {
+    await send(session, 'Emulation.setDeviceMetricsOverride', {
+      width,
+      height: 900,
+      deviceScaleFactor: 1,
+      mobile: false,
+    })
+    await send(session, 'Page.navigate', { url: `${BASE}${path}` })
+    await sleep(1400)
+    await waitForMount(session)
+
+    const row = await evaluate(
+      session,
+      `(async () => {
+        const wait = (ms) => new Promise((r) => setTimeout(r, ms))
+
+        let previous = -1
+        for (let i = 0; i < 12; i++) {
+          window.scrollTo(0, document.documentElement.scrollHeight)
+          await wait(250)
+          if (Math.abs(window.scrollY - previous) < 2) break
+          previous = window.scrollY
+        }
+
+        const nav = document.querySelector('nav[aria-label="Quick contact"]')
+        const visible = !!nav && getComputedStyle(nav).display !== 'none'
+          && nav.getBoundingClientRect().height > 0
+        const rect = visible ? nav.getBoundingClientRect() : null
+        const own = [...document.querySelectorAll('main > div')].find(
+          (d) => getComputedStyle(d).position === 'sticky',
+        )
+        const ownShown = !!own && getComputedStyle(own).display !== 'none'
+          && own.getBoundingClientRect().height > 0
+        // The vehicle page's own action bar. Its call to action changes with
+        // the vehicle's status, so the labels are read rather than assumed.
+        const ownLabels = ownShown
+          ? [...own.querySelectorAll('a, button')].map((b) => b.textContent.trim())
+          : []
+        // As above: the page footer is the one outside main, since a
+        // testimonial card legitimately uses footer for its attribution.
+        const lastRow = [...document.querySelectorAll('footer')]
+          .filter((f) => !f.closest('main'))
+          .pop()
+          .lastElementChild.getBoundingClientRect()
+
+        return {
+          visible,
+          height: rect ? Math.round(rect.height) : 0,
+          labels: nav
+            ? [...nav.querySelectorAll('a')].map((a) => a.textContent.trim())
+            : [],
+          hrefs: nav
+            ? [...nav.querySelectorAll('a')].map((a) => a.getAttribute('href'))
+            : [],
+          ownBar: !!own && getComputedStyle(own).display !== 'none'
+            && own.getBoundingClientRect().height > 0,
+          ownLabels,
+          // At the true bottom of the document the reserved padding has to
+          // lift the footer's last line clear of the bar, or it is stranded.
+          footerClearsBar: !rect || lastRow.bottom <= Math.round(rect.top) + 1,
+          footerLastRowReachable:
+            lastRow.bottom <= window.innerHeight + 1 && lastRow.top >= 0,
+          overflowX: document.documentElement.scrollWidth > window.innerWidth + 1,
+        }
+      })()`,
+    )
+
+    console.log(
+      `${path.padEnd(34)} w=${String(width).padEnd(5)} bar=${String(row.visible).padEnd(5)} h=${String(row.height).padEnd(3)} ownBar=${String(row.ownBar).padEnd(5)} own=[${row.ownLabels.join(' / ')}] ${row.labels.join(' / ')}`,
+    )
+
+    if (ownCta && !row.ownLabels.includes(ownCta)) {
+      problems.push(
+        `Mobile CTA: the vehicle action bar on ${path} offers "${row.ownLabels.join('|') || '(none)'}", expected it to include "${ownCta}"`,
+      )
+    }
+    if (ownCtaAbsent && row.ownLabels.includes(ownCtaAbsent)) {
+      problems.push(
+        `Mobile CTA: the vehicle action bar on ${path} still offers "${ownCtaAbsent}"`,
+      )
+    }
+
+    if (row.visible !== expectBar) {
+      problems.push(
+        `Mobile CTA: bar is ${row.visible ? 'shown' : 'hidden'} on ${path} at ${width}px, expected ${expectBar ? 'shown' : 'hidden'}`,
+      )
+    }
+    if (!row.footerLastRowReachable) {
+      problems.push(
+        `Mobile CTA: the footer's last row is unreachable on ${path} at ${width}px`,
+      )
+    }
+    if (row.overflowX) {
+      problems.push(`Mobile CTA: horizontal overflow on ${path} at ${width}px`)
+    }
+    if (expectBar) {
+      const labels = row.labels.join('|')
+      if (labels !== 'Call|Message|Appointment') {
+        problems.push(`Mobile CTA: actions are "${labels || '(none)'}"`)
+      }
+      if (!row.hrefs[0]?.startsWith('tel:')) {
+        problems.push(`Mobile CTA: Call points at ${row.hrefs[0]}`)
+      }
+      if (row.height < 44) {
+        problems.push(
+          `Mobile CTA: bar is only ${row.height}px tall, under a 44px tap target`,
+        )
+      }
+      if (!row.footerClearsBar) {
+        problems.push(`Mobile CTA: bar covers the footer's last row on ${path}`)
+      }
+    }
   }
 
   console.log('\n================ RESPONSIVE ================')

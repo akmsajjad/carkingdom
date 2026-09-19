@@ -7,37 +7,43 @@
    Tailwind utilities (bg-brand-700, text-accent-500, shadow-card, ...), so a
    change to this file propagates through the whole application.
 
-   Palette rationale: a deep navy reads as trustworthy and professional (the
-   dealership's core promise), with a warm gold accent for calls to action and
-   "kingdom" branding. Neutrals stay cool to keep the automotive photography
-   the loudest thing on the page.
+   Palette rationale: taken from the Car Kingdom logo — a red car silhouette and
+   silver rules on white. The red is the brand's one saturated colour, so it is
+   the accent, and it is reserved for calls to action and emphasis. Everything
+   structural is graphite: the logo has no dark colour of its own, and a
+   near-black neutral is what lets the red read as a highlight instead of a
+   wallpaper, while keeping the automotive photography the loudest thing on the
+   page. Neutrals stay cool so the two warm colours (red, and the amber used for
+   star ratings) are the only warm things in the interface.
    ========================================================================== */
 
 @theme {
-  /* Brand — deep navy */
-  --color-brand-50: #eff5fb;
-  --color-brand-100: #d9e7f5;
-  --color-brand-200: #b6d0eb;
-  --color-brand-300: #86b0dc;
-  --color-brand-400: #4f88c8;
-  --color-brand-500: #2b6ab0;
-  --color-brand-600: #1f5394;
-  --color-brand-700: #1b4378;
-  --color-brand-800: #173763;
-  --color-brand-900: #0f2647;
-  --color-brand-950: #091a33;
+  /* Brand — graphite. Structural: headings, dark surfaces, borders, links. */
+  --color-brand-50: #f5f7f9;
+  --color-brand-100: #e9edf1;
+  --color-brand-200: #d3dae2;
+  --color-brand-300: #aeb9c7;
+  --color-brand-400: #8291a5;
+  --color-brand-500: #64748b;
+  --color-brand-600: #4e5a6b;
+  --color-brand-700: #3f4859;
+  --color-brand-800: #2b3240;
+  --color-brand-900: #1c212b;
+  --color-brand-950: #10131a;
 
-  /* Accent — gold */
-  --color-accent-50: #fffbeb;
-  --color-accent-100: #fef3c7;
-  --color-accent-200: #fde68a;
-  --color-accent-300: #fcd34d;
-  --color-accent-400: #fbbf24;
-  --color-accent-500: #f59e0b;
-  --color-accent-600: #d97706;
-  --color-accent-700: #b45309;
-  --color-accent-800: #92400e;
-  --color-accent-900: #78350f;
+  /* Accent — the logo red. 600 is the red of the car in the mark and is the
+     one that carries white text (5.9:1). */
+  --color-accent-50: #fef2f3;
+  --color-accent-100: #fde3e6;
+  --color-accent-200: #fbccd2;
+  --color-accent-300: #f7a3ad;
+  --color-accent-400: #f06f80;
+  --color-accent-500: #e23d55;
+  --color-accent-600: #c8102e;
+  --color-accent-700: #a80d26;
+  --color-accent-800: #8c0f24;
+  --color-accent-900: #781122;
+  --color-accent-950: #420512;
 
   /* Typography */
   --font-sans:
@@ -48,14 +54,28 @@
     sans-serif;
 
   /* Shadows — deliberately subtle; a dealership site should feel crisp, not
-     puffy. */
-  --shadow-card: 0 1px 2px rgb(9 26 51 / 0.04), 0 4px 12px rgb(9 26 51 / 0.06);
+     puffy. Tinted with the brand-950 graphite rather than pure black, so a
+     shadow sits under a card the way it sits under the header. */
+  --shadow-card: 0 1px 2px rgb(16 19 26 / 0.04), 0 4px 12px rgb(16 19 26 / 0.06);
   --shadow-card-hover:
-    0 2px 4px rgb(9 26 51 / 0.06), 0 12px 28px rgb(9 26 51 / 0.12);
-  --shadow-header: 0 1px 3px rgb(9 26 51 / 0.08);
+    0 2px 4px rgb(16 19 26 / 0.06), 0 12px 28px rgb(16 19 26 / 0.12);
+  --shadow-header: 0 1px 3px rgb(16 19 26 / 0.08);
 
   /* Layout */
   --spacing-header: 4.5rem;
+  /* The global mobile call-to-action bar. A token because three places have to
+     agree on it: the bar's own height, the padding the shell reserves so the
+     footer's last row is not left underneath it, and the offset the toast
+     stack sits at so it clears the bar.
+
+     The safe-area inset is part of the token rather than extra bottom padding
+     on the bar, because padding on the bar alone would make it taller than the
+     other two believe it is — the footer would go back under it, by exactly the
+     height of the gesture bar on the phone that has one. Being in the token
+     means all three move together. The `0px` fallback is required: without it
+     `env()` is invalid where it is unsupported, which would take the whole
+     custom property — and every utility built on it — down with it. */
+  --spacing-mobile-cta: calc(3.5rem + env(safe-area-inset-bottom, 0px));
 
   /* Motion — used sparingly. The brief calls for smooth transitions, not a
      page that animates everything. */

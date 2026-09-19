@@ -4,6 +4,7 @@ import Field from '../common/Field'
 import Input from '../common/Input'
 import Textarea from '../common/Textarea'
 import FormActions from '../forms/FormActions'
+import FormErrorSummary from '../forms/FormErrorSummary'
 import useLeadForm from '../../hooks/useLeadForm'
 import { submitPartsOrder } from '../../services/leads'
 import { SITE, TEL_HREF } from '../../data/site'
@@ -22,14 +23,26 @@ const INITIAL_VALUES = { name: '', email: '', phone: '', notes: '' }
  * `validateContact` is the same name/email/phone rule the enquiry, test-drive
  * and finance forms use, so "what counts as a phone number" cannot drift
  * between four forms on the same site.
+ *
+ * ## Two callbacks, because the order and the view are separate events
+ *
+ * `onSuccess` fires the moment the counter request comes back — that is when
+ * the order exists, and it is the caller's cue to retire the cart. `onClose`
+ * fires when the customer is finished looking at the confirmation.
+ *
+ * They are not the same moment, and collapsing them into one was a real bug:
+ * with only the Done button wired up, dismissing the confirmation with Escape
+ * or the close button left every line still in the cart, so the next checkout
+ * sent the same order twice.
  */
-export default function CheckoutForm({ items, fulfilment, onPlaced, onCancel }) {
-  const { values, errors, submitting, submitted, setField, handleSubmit } =
+export default function CheckoutForm({ items, fulfilment, onSuccess, onClose }) {
+  const { values, errors, errorCount, submitting, submitted, setField, handleSubmit } =
     useLeadForm({
       initialValues: INITIAL_VALUES,
       validate: validateContact,
       onSubmit: (fields) => submitPartsOrder({ items, fulfilment, ...fields }),
       successMessage: 'Order request sent to the parts counter',
+      onSuccess,
     })
 
   if (submitted) {
@@ -52,7 +65,7 @@ export default function CheckoutForm({ items, fulfilment, onPlaced, onCancel }) 
           </a>
           .
         </p>
-        <Button className="mt-6" onClick={onPlaced}>
+        <Button className="mt-6" onClick={onClose}>
           Done
         </Button>
       </div>
@@ -60,7 +73,14 @@ export default function CheckoutForm({ items, fulfilment, onPlaced, onCancel }) 
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    // `noValidate` so the browser's own bubbles stay out of the way and the
+    // messages below the fields — and the summary above them — are the only
+    // thing the customer is told. Without it the two disagree: the browser
+    // rejects an address the app's own rule accepts, and the field's error
+    // slot stays empty while a tooltip explains why nothing happened.
+    <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+      <FormErrorSummary count={errorCount} />
+
       <p className="text-sm text-slate-600">
         {fulfilment === 'delivery'
           ? 'Local delivery — the counter will confirm the cost before anything ships.'
@@ -128,7 +148,7 @@ export default function CheckoutForm({ items, fulfilment, onPlaced, onCancel }) 
       <FormActions
         submitLabel="Send order request"
         submitting={submitting}
-        onCancel={onCancel}
+        onCancel={onClose}
       />
     </form>
   )

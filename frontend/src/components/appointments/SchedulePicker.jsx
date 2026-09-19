@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Ban, CalendarX } from 'lucide-react'
+import { Ban, CalendarX, TriangleAlert } from 'lucide-react'
 import Skeleton from '../common/Skeleton'
 import { errorClasses, hintClasses, labelClasses } from '../common/formStyles'
 import useAsync from '../../hooks/useAsync'
@@ -30,7 +30,12 @@ export default function SchedulePicker({
 }) {
   const days = useMemo(() => upcomingDays(), [])
 
-  const { data: availability, loading } = useAsync(
+  const {
+    data: availability,
+    loading,
+    error,
+    reload,
+  } = useAsync(
     () => getAppointmentAvailability(date, { durationHours }),
     `${date}|${durationHours}`,
   )
@@ -137,7 +142,36 @@ export default function SchedulePicker({
           </div>
         )}
 
-        {!loading && slots.length === 0 && (
+        {/* Checked before the closed branch below, not after. A failed
+            availability request leaves `slots` empty and `availability` null,
+            and the closed branch's fallback copy is a factual claim about the
+            business — "We are closed that day." The diary being unreachable is
+            not the shop being shut, and telling a customer the shop is closed
+            when the shop is open is the worst thing this component could say. */}
+        {!loading && error && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5">
+            <p className="flex items-start gap-2 text-sm text-amber-900">
+              <TriangleAlert
+                className="mt-0.5 size-4 shrink-0 text-amber-600"
+                aria-hidden="true"
+              />
+              <span>
+                We couldn&rsquo;t check the diary for that day. Try again, or
+                call us on the number at the top of the page — we can book you
+                in over the phone.
+              </span>
+            </p>
+            <button
+              type="button"
+              onClick={reload}
+              className="mt-2 ml-6 rounded-sm text-sm font-semibold text-amber-900 underline underline-offset-2 transition-colors hover:text-amber-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500"
+            >
+              Try again
+            </button>
+          </div>
+        )}
+
+        {!loading && !error && slots.length === 0 && (
           <p className="flex items-start gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-600">
             <CalendarX className="mt-0.5 size-4 shrink-0 text-slate-400" aria-hidden="true" />
             <span>
@@ -147,7 +181,7 @@ export default function SchedulePicker({
           </p>
         )}
 
-        {!loading && slots.length > 0 && (
+        {!loading && !error && slots.length > 0 && (
           <>
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
               {slots.map((slot) => {

@@ -4,7 +4,6 @@ import ErrorState from '../components/common/ErrorState'
 import OptimizedImage from '../components/common/OptimizedImage'
 import PageHeader from '../components/common/PageHeader'
 import SectionHeading from '../components/common/SectionHeading'
-import { LoadingBlock } from '../components/common/Spinner'
 import JobGrid from '../components/careers/JobGrid'
 import WhyWorkWithUs from '../components/careers/WhyWorkWithUs'
 import useAsync from '../hooks/useAsync'
@@ -106,14 +105,23 @@ export default function Careers() {
           title={
             openCount > 0
               ? `${openCount} ${openCount === 1 ? 'role' : 'roles'} open right now`
-              : 'Roles open right now'
+              : // Not "Roles open right now". At zero that heading asserts there
+                // are openings, immediately above a grid saying there are none —
+                // and the section's own copy promises every posting is a real
+                // one, so a visitor who sees the contradiction has reason to
+                // doubt the postings that do appear.
+                'No roles open at the moment'
           }
           description="Every posting below is a real opening with a real start date — we are not collecting résumés. Each one lists the pay, the hours and what the job actually involves."
         />
 
-        {loading && !jobs ? (
-          <LoadingBlock className="mt-10" label="Loading open roles…" />
-        ) : error ? (
+        {/* `loading` is handed to the grid rather than branched on here. The
+            page used a full-width spinner above the grid, which made the
+            grid's own `skeletonCount` unreachable — four job-card skeletons
+            were written and then never rendered. The skeletons are also the
+            better answer: the page does not jump when the roles arrive,
+            because the placeholder is already the shape of a job card. */}
+        {error ? (
           <ErrorState
             className="mt-10"
             title="We couldn't load the open roles"
@@ -123,7 +131,17 @@ export default function Careers() {
             onRetry={reload}
           />
         ) : (
-          <JobGrid jobs={jobs ?? []} skeletonCount={4} className="mt-10" />
+          <JobGrid
+            jobs={jobs ?? []}
+            loading={loading}
+            skeletonCount={4}
+            className="mt-10"
+            emptyAction={
+              <Button href={RESUME_MAILTO} variant="outline" icon={Mail}>
+                Email your résumé
+              </Button>
+            }
+          />
         )}
       </section>
 

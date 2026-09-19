@@ -28,24 +28,30 @@ import { SITE, TEL_HREF } from '../data/site'
 export default function ServiceDetails() {
   const { slug } = useParams()
 
-  const { data: service, loading, error, reload } = useAsync(
+  const { data: service, loading, error, stale, reload } = useAsync(
     () => getServiceBySlug(slug),
     slug,
   )
 
-  const { data: relatedData, loading: relatedLoading } = useAsync(
-    () => getRelatedServices(slug, 3),
-    slug,
-  )
+  const {
+    data: relatedData,
+    loading: relatedLoading,
+    stale: relatedStale,
+  } = useAsync(() => getRelatedServices(slug, 3), slug)
 
   // `data` is `null` until the request resolves and a destructuring default
   // only covers `undefined`, so `related.length` below would read off null on
   // the render that follows the service arriving.
-  const related = relatedData ?? []
+  //
+  // Both `stale` flags exist for the same reason: `useAsync` keeps the last
+  // result while the next one loads, so without them a navigation from one
+  // service to another draws the previous one — its name in the heading, its
+  // price in the panel — under the new URL.
+  const related = relatedStale ? [] : (relatedData ?? [])
 
   useDocumentTitle(service?.name ?? 'Service')
 
-  if (loading && !service) {
+  if ((loading && !service) || stale) {
     return (
       <div className="container-page py-20">
         <LoadingBlock label="Loading this service…" />
@@ -250,7 +256,7 @@ export default function ServiceDetails() {
           </Card>
         </div>
 
-        <Card className="mt-12 bg-slate-50">
+        <Card tone="subtle" className="mt-12">
           <h2 className="text-xl font-bold text-brand-900">
             Before you book
           </h2>
@@ -276,7 +282,12 @@ export default function ServiceDetails() {
           </ul>
         </Card>
 
-        {related.length > 0 && (
+        {/* The loading state is part of the condition, not just the count.
+            Guarding on `related.length > 0` alone made the skeletons that are
+            passed to the grid below unreachable: while the request was in
+            flight the length was zero, so the whole section — heading and all
+            — was absent, and the page jumped when it appeared. */}
+        {(relatedLoading || relatedStale || related.length > 0) && (
           <section className="mt-16">
             <div className="flex flex-wrap items-end justify-between gap-4">
               <h2 className="text-xl font-bold text-brand-900">
@@ -292,7 +303,7 @@ export default function ServiceDetails() {
 
             <ServiceGrid
               services={related}
-              loading={relatedLoading}
+              loading={relatedLoading || relatedStale}
               compact
               skeletonCount={3}
               className="mt-8"

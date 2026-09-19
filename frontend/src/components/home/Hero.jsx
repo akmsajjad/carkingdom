@@ -66,7 +66,13 @@ export default function Hero({ vehicle, stats }) {
               Saskatoon, Saskatchewan
             </p>
 
-            <h1 className="mt-3 text-4xl leading-tight font-bold tracking-tight sm:text-5xl">
+            {/* `text-white` is not redundant with the section's own
+                `text-white`. `index.css` sets a colour on `h1`-`h4` directly,
+                and a declaration that lands on the element always beats one it
+                would otherwise inherit — so without this the heading renders
+                brand-950, near-black, on the graphite hero. Every heading on a
+                dark surface in this project has to say so itself. */}
+            <h1 className="mt-3 text-4xl leading-tight font-bold tracking-tight text-white sm:text-5xl">
               Quality vehicles, honest service, and the parts to keep them
               running.
             </h1>

@@ -59,7 +59,7 @@ export default function Appointments() {
           </Card>
 
           <div className="space-y-6">
-            <Card className="bg-slate-50">
+            <Card tone="subtle">
               <h2 className="text-sm font-semibold text-brand-900">
                 What happens next
               </h2>
@@ -103,7 +103,7 @@ export default function Appointments() {
               </Button>
             </Card>
 
-            <Card className="bg-brand-50">
+            <Card tone="muted">
               <h2 className="text-sm font-semibold text-brand-900">
                 Something urgent?
               </h2>

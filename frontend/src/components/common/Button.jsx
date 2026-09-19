@@ -6,7 +6,7 @@ const VARIANTS = {
   primary:
     'bg-brand-900 text-white hover:bg-brand-800 active:bg-brand-950 shadow-sm',
   accent:
-    'bg-accent-500 text-brand-950 hover:bg-accent-400 active:bg-accent-600 shadow-sm font-semibold',
+    'bg-accent-600 text-white hover:bg-accent-700 active:bg-accent-800 shadow-sm font-semibold',
   outline:
     'border border-slate-300 bg-white text-brand-900 hover:bg-slate-50 active:bg-slate-100',
   ghost: 'text-brand-900 hover:bg-slate-100 active:bg-slate-200',
@@ -42,7 +42,12 @@ export default function Button({
   const isDisabled = disabled || loading
 
   const classes = cn(
-    'inline-flex items-center justify-center rounded-lg font-medium transition-colors',
+    // `whitespace-nowrap` because a button label is a single unit: given the
+    // chance, flexbox will shrink a button below its text and break the label
+    // across two lines rather than overflow, which reads as a broken control.
+    // Every other label in the app is short enough that this changes nothing;
+    // it matters in the header, where the row is genuinely at capacity.
+    'inline-flex items-center justify-center rounded-lg font-medium whitespace-nowrap transition-colors',
     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500',
     VARIANTS[variant],
     SIZES[size],

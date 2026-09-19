@@ -1,7 +1,7 @@
 import { RotateCcw } from 'lucide-react'
 import Button from '../common/Button'
 import Drawer from '../common/Drawer'
-import FacetList, { LoneCheckbox, RangeInputs } from '../common/Facets'
+import FacetList, { FacetErrorNotice, LoneCheckbox, RangeInputs } from '../common/Facets'
 import FilterSection from '../common/FilterSection'
 import Select from '../common/Select'
 import { formatPrice } from '../../utils/format'
@@ -19,6 +19,8 @@ import { formatPrice } from '../../utils/format'
 export default function PartFilters({
   filters,
   options,
+  optionsError = null,
+  onReloadOptions,
   facets,
   activeCount = 0,
   onToggleArray,
@@ -49,6 +51,12 @@ export default function PartFilters({
           </button>
         )}
       </div>
+
+      {optionsError && (
+        <div className="pb-1">
+          <FacetErrorNotice onRetry={onReloadOptions} />
+        </div>
+      )}
 
       <FilterSection title="Category" defaultOpen>
         <FacetList
@@ -126,6 +134,7 @@ export default function PartFilters({
       </aside>
 
       <Drawer
+        id="part-filters"
         open={open}
         onClose={onClose}
         label="Parts filters"

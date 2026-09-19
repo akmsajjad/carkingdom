@@ -32,24 +32,30 @@ export default function VehicleDetails() {
   const { slug } = useParams()
   const [intent, setIntent] = useState(null)
 
-  const { data: vehicle, loading, error, reload } = useAsync(
+  const { data: vehicle, loading, error, stale, reload } = useAsync(
     () => getVehicleBySlug(slug),
     slug,
   )
 
-  const { data: similarData, loading: similarLoading } = useAsync(
-    () => getSimilarVehicles(slug, 3),
-    slug,
-  )
+  const {
+    data: similarData,
+    loading: similarLoading,
+    stale: similarStale,
+  } = useAsync(() => getSimilarVehicles(slug, 3), slug)
 
   // `data` is `null` until the request resolves and a destructuring default
   // only covers `undefined`, so reading `.length` off it below would throw on
-  // the render that follows the vehicle arriving.
-  const similar = similarData ?? []
+  // the render that follows the vehicle arriving. The `stale` half is the same
+  // problem as the page's own fetch: the previous vehicle's "you might also
+  // like" strip still lists the vehicle you have just navigated away from.
+  const similar = similarStale ? [] : (similarData ?? [])
 
   useDocumentTitle(vehicle?.title ?? 'Vehicle details')
 
-  if (loading && !vehicle) {
+  // `stale` covers the render between the slug changing and the new vehicle
+  // arriving: without it the previous one is still in `vehicle` and would be
+  // drawn under the new URL, buttons and all.
+  if ((loading && !vehicle) || stale) {
     return (
       <div className="container-page py-20">
         <LoadingBlock label="Loading this vehicle…" />
@@ -193,7 +199,7 @@ export default function VehicleDetails() {
         {/* Prices, taxes and the estimate above are all indicative. Saying so
             once, plainly, is cheaper than a disclaimer per figure — and it is
             the kind of thing a buyer is entitled to know before they call. */}
-        <Card className="mt-12 bg-slate-50">
+        <Card tone="subtle" className="mt-12">
           <h2 className="text-xl font-bold text-brand-900">
             Before you buy
           </h2>
@@ -216,7 +222,7 @@ export default function VehicleDetails() {
 
         <SimilarVehicles
           vehicles={similar}
-          loading={similarLoading}
+          loading={similarLoading || similarStale}
           className="mt-16"
         />
       </div>

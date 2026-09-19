@@ -9,16 +9,21 @@ import Badge from '../common/Badge'
  * discount is what a customer scanning a grid is looking for, so it leads, and
  * "universal fit" comes last because it is a property of the part rather than a
  * reason to buy it today.
+ *
+ * "On sale" takes the brand red and "featured" takes graphite. Both can appear
+ * on one part, and the two used to be told apart by the accent being gold —
+ * now that the accent is the same red as `danger`, leaving them as they were
+ * would have printed two identical chips side by side.
  */
 export default function PartBadges({ part, className }) {
   const badges = []
 
   if (part.salePrice) {
-    badges.push({ key: 'sale', variant: 'danger', label: 'On sale' })
+    badges.push({ key: 'sale', variant: 'accent', label: 'On sale' })
   }
 
   if (part.featured) {
-    badges.push({ key: 'featured', variant: 'accent', label: 'Featured' })
+    badges.push({ key: 'featured', variant: 'brand', label: 'Featured' })
   }
 
   if (!part.inStock) {

@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useLocation, useNavigationType } from 'react-router-dom'
+import { scrollBehavior } from '../../utils/scroll'
 
 /**
  * Resets scroll position on navigation.
@@ -9,6 +10,9 @@ import { useLocation, useNavigationType } from 'react-router-dom'
  *    is what a user expects when they hit back into a long listing.
  *  - A hash target scrolls to that element instead of the top, so footer and
  *    in-page anchor links like /about#team land where they point.
+ *
+ * Moving focus on navigation is the other half of this job, but it lives in
+ * `useRouteFocus` so the two can be reasoned about separately.
  */
 export default function ScrollToTop() {
   const { pathname, hash } = useLocation()
@@ -18,7 +22,7 @@ export default function ScrollToTop() {
     if (hash) {
       const target = document.querySelector(hash)
       if (target) {
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        target.scrollIntoView({ behavior: scrollBehavior(), block: 'start' })
         return
       }
     }

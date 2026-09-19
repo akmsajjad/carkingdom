@@ -12,6 +12,7 @@ import useDocumentTitle from '../hooks/useDocumentTitle'
 import usePartFilters, { FILTER_FIELDS } from '../hooks/usePartFilters'
 import { getPartFilterOptions, getParts } from '../services/parts'
 import { SORT_OPTIONS } from '../data/parts'
+import { scrollBehavior } from '../utils/scroll'
 
 export default function Parts() {
   useDocumentTitle('Parts & Accessories')
@@ -41,7 +42,15 @@ export default function Parts() {
     requestKey,
   )
 
-  const { data: options } = useAsync(getPartFilterOptions, 'part-filter-options')
+  // Options and facet counts load once; only the results depend on the filters.
+  // Its failure is handled rather than ignored: the panel would otherwise
+  // render headings over empty lists, which looks like a catalogue with no
+  // brake parts rather than a request that did not come back.
+  const {
+    data: options,
+    error: optionsError,
+    reload: reloadOptions,
+  } = useAsync(getPartFilterOptions, 'part-filter-options')
 
   const parts = data?.results ?? []
   const total = data?.total ?? 0
@@ -53,7 +62,7 @@ export default function Parts() {
     setPage(next)
     // Jumping to page 3 from the bottom of the page otherwise leaves the user
     // looking at the footer of a list they have not seen the top of.
-    resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    resultsRef.current?.scrollIntoView({ behavior: scrollBehavior(), block: 'start' })
   }
 
   return (
@@ -70,6 +79,8 @@ export default function Parts() {
           <PartFilters
             filters={filters}
             options={options}
+            optionsError={optionsError}
+            onReloadOptions={reloadOptions}
             facets={data?.facets}
             activeCount={activeCount}
             onToggleArray={toggleArrayFilter}
@@ -95,6 +106,8 @@ export default function Parts() {
               sortLabel="Sort parts"
               onSetFilter={setFilter}
               onOpenFilters={() => setDrawerOpen(true)}
+              filtersPanelId="part-filters"
+              filtersOpen={drawerOpen}
               activeCount={activeCount}
             />
 
