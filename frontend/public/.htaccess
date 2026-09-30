@@ -1,0 +1,71 @@
+# Car Kingdom — Apache / cPanel hosting configuration.
+#
+# This file lives in `public/`, so Vite copies it to the root of `dist/` on
+# every build and it is uploaded along with everything else. Nothing here needs
+# to be re-created in cPanel by hand.
+
+# ---------------------------------------------------------------------------
+# 1. Single-page application fallback  (REQUIRED)
+# ---------------------------------------------------------------------------
+#
+# React Router resolves routes in the browser, so `index.html` is the only page
+# that physically exists on the server. `/used-cars` and `/about` are not files
+# and never will be.
+#
+# Without this block, Apache answers a direct hit on any deep link — including
+# an ordinary refresh on a vehicle page — with its own 404, before React has had
+# a chance to load. The homepage would work and nothing else would, which is a
+# confusing failure to debug because the site is obviously fine once you are on
+# it.
+#
+# Everything is handed to index.html instead, and React Router then renders the
+# right page — or its own 404, which is the one users should see.
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Real files and directories are served as-is. These two conditions are what
+  # stop the fallback from swallowing the built assets, the images and the
+  # favicon — without them every .js and .png request would return HTML.
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+
+  # Everything else is a client-side route.
+  RewriteRule . /index.html [L]
+</IfModule>
+
+# ---------------------------------------------------------------------------
+# 2. Caching for the content-hashed build output
+# ---------------------------------------------------------------------------
+#
+# Vite writes `assets/index-5e7ybp_i.js` — the hash is derived from the file's
+# contents, so a changed file always gets a new name. Those can be cached for a
+# year safely; a deploy simply points at different filenames.
+#
+# Deliberately NOT applied to `/images/`. Those filenames are stable —
+# `hero.svg`, `logo-full-on-dark.png` — so caching them for a year would mean
+# that replacing a photo leaves the old one on visitors' screens long after the
+# upload, with no way to tell why.
+
+<IfModule mod_headers.c>
+  SetEnvIf Request_URI "^/assets/" CK_HASHED_ASSET
+  Header set Cache-Control "public, max-age=31536000, immutable" env=CK_HASHED_ASSET
+</IfModule>
+
+# ---------------------------------------------------------------------------
+# 3. Force HTTPS  —  ENABLE THIS ONLY AFTER AutoSSL IS ACTIVE
+# ---------------------------------------------------------------------------
+#
+# Left off on purpose. If this is switched on before the subdomain has a
+# certificate, every visitor is redirected to an https:// address that cannot
+# complete a handshake, and the site appears completely down rather than
+# partly misconfigured.
+#
+# Turn it on in cPanel → SSL/TLS Status, run AutoSSL for
+# carkingdom.glovextrade.com, confirm https:// loads, and then uncomment.
+
+# <IfModule mod_rewrite.c>
+#   RewriteCond %{HTTPS} !=on
+#   RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
+# </IfModule>
