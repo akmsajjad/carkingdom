@@ -1,24 +1,104 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600" role="img" aria-label="2023 Kia Sportage">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600" role="presentation">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#eff5fb"/>
-      <stop offset="1" stop-color="#d7e5f5"/>
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f0f4f9"/>
+      <stop offset="0.58" stop-color="#dee6ef"/>
+      <stop offset="1" stop-color="#cbd6e2"/>
+    </linearGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c7d0dc"/>
+      <stop offset="0.5" stop-color="#b0bccb"/>
+      <stop offset="1" stop-color="#94a1b3"/>
+    </linearGradient>
+    <radialGradient id="pool" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="key" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vig" cx="0.5" cy="0.48" r="0.76">
+      <stop offset="0.55" stop-color="#10131a" stop-opacity="0"/>
+      <stop offset="1" stop-color="#10131a" stop-opacity="0.22"/>
+    </radialGradient>
+    <linearGradient id="paint" x1="0" y1="0" x2="0.16" y2="1">
+      <stop offset="0" stop-color="#9badc2"/>
+      <stop offset="0.3" stop-color="#506f94"/>
+      <stop offset="0.62" stop-color="#2f5480"/>
+      <stop offset="1" stop-color="#1a2f48"/>
+    </linearGradient>
+    <linearGradient id="paintLo" x1="0" y1="0" x2="0.2" y2="1">
+      <stop offset="0" stop-color="#294a71"/>
+      <stop offset="1" stop-color="#142336"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="0.28" y2="1">
+      <stop offset="0" stop-color="#b8cadc"/>
+      <stop offset="0.4" stop-color="#63768e"/>
+      <stop offset="1" stop-color="#2b3543"/>
+    </linearGradient>
+    <linearGradient id="steel" x1="0" y1="0" x2="0.34" y2="1">
+      <stop offset="0" stop-color="#f6f8fb"/>
+      <stop offset="0.34" stop-color="#ccd6e1"/>
+      <stop offset="0.68" stop-color="#98a6b8"/>
+      <stop offset="1" stop-color="#6a7889"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#eef2f7"/>
+      <stop offset="0.45" stop-color="#b9c4d2"/>
+      <stop offset="1" stop-color="#7b8a9c"/>
+    </linearGradient>
+    <linearGradient id="cabin" x1="0" y1="0" x2="0.2" y2="1">
+      <stop offset="0" stop-color="#4a5361"/>
+      <stop offset="1" stop-color="#191d24"/>
     </linearGradient>
   </defs>
-  <rect width="800" height="600" fill="url(#bg)"/>
-  <rect x="16" y="16" width="768" height="568" rx="20"
-        fill="none" stroke="#2f5480" stroke-opacity="0.18" stroke-width="2"/>
   
-  <g transform="translate(0, -10)">
-    <path d="M150 372 L150 330 Q150 308 172 306 L246 300 L300 242 Q312 228 330 228 L470 228 Q488 228 500 242 L554 300 L628 306 Q650 308 650 330 L650 372 Z"
-          fill="#2f5480" fill-opacity="0.14" stroke="#2f5480" stroke-width="14" stroke-linejoin="round"/>
-    <circle cx="248" cy="376" r="46" fill="none" stroke="#2f5480" stroke-width="14"/>
-    <circle cx="552" cy="376" r="46" fill="none" stroke="#2f5480" stroke-width="14"/>
-  </g>
-  <text x="400" y="500" text-anchor="middle"
-        font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="26"
-        font-weight="600" fill="#33475f">2023 Kia Sportage</text>
-  <text x="400" y="536" text-anchor="middle"
-        font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="19"
-        fill="#6b7d92">EX · Side profile</text>
+  <rect width="800" height="600" fill="url(#wall)"/>
+  <rect y="420" width="800" height="180" fill="url(#floor)"/>
+  <rect y="419" width="800" height="2" fill="#8b97a8" opacity="0.45"/>
+  <ellipse cx="400" cy="452" rx="392" ry="78" fill="url(#pool)"/>
+  <ellipse cx="566" cy="86" rx="300" ry="232" fill="url(#key)"/>
+  
+    
+  <ellipse cx="400" cy="498" rx="191" ry="24" fill="#2b3240" opacity="0.2"/>
+  <ellipse cx="400" cy="496" rx="148.98000000000002" ry="15" fill="#2b3240" opacity="0.22"/>
+    <!-- Tyres sit behind the body, so only the part below the bumper shows —
+         which is exactly what a tyre looks like head-on. -->
+    <rect x="217" y="383.2" width="52" height="116.80000000000001" rx="16" fill="#15181e"/>
+    <rect x="531" y="383.2" width="52" height="116.80000000000001" rx="16" fill="#15181e"/>
+    <path d="M 205 429.2 L 205 275.58000000000004 Q 205 241.58 220.6 241.58 L 231.60000000000002 182 Q 259.6 146 291.6 146 L 508.4 146 Q 540.4 146 568.4 182 L 579.4 241.58 Q 595 241.58 595 275.58000000000004 L 595 429.2 Z" fill="url(#paint)"/>
+    <path d="M 205 429.2 L 205 275.58000000000004 Q 205 241.58 220.6 241.58 L 231.60000000000002 182 Q 259.6 146 291.6 146 L 508.4 146 Q 540.4 146 568.4 182 L 579.4 241.58 Q 595 241.58 595 275.58000000000004 L 595 429.2 Z" fill="none" stroke="#15263a" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M 293.6 155 L 506.4 155"
+          stroke="#8fa3ba" stroke-width="6" opacity="0.32" stroke-linecap="round" fill="none"/>
+    <path d="M 253.60000000000002 160 L 546.4 160 L 553.4 235.58 L 246.6 235.58 Z" fill="url(#glass)" stroke="#151a21" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M 252.6 231.58 L 547.4 231.58"
+          stroke="#0f1218" stroke-width="10" opacity="0.35" stroke-linecap="round" fill="none"/>
+    <path d="M 227 264.68 L 573 264.68"
+          stroke="#6d87a6" stroke-width="5" opacity="0.38" stroke-linecap="round" fill="none"/>
+
+    <rect x="225" y="274.68" width="102" height="34" rx="14"
+                  fill="#eef4fa"
+                  stroke="#93a4b7" stroke-width="2"/>
+    <rect x="473" y="274.68" width="102" height="34" rx="14"
+                  fill="#eef4fa"
+                  stroke="#93a4b7" stroke-width="2"/>
+    <rect x="314" y="294.68" width="172" height="84.04000000000002" rx="14" fill="#141a21"/>
+    <g fill="#39424f">
+      <rect x="324" y="308.68" width="152" height="7" rx="3.5"/>
+      <rect x="324" y="326.68" width="152" height="7" rx="3.5"/>
+      <rect x="324" y="344.68" width="152" height="7" rx="3.5"/>
+    </g>
+    <rect x="366" y="324.70000000000005" width="68" height="26" rx="6"
+          fill="#182a40"/>
+    <rect x="225" y="386.72" width="350" height="42.47999999999996" rx="16"
+          fill="#182c43"/>
+    <rect x="336" y="408.72" width="128" height="28" rx="8" fill="#e8eef5" stroke="#93a4b7" stroke-width="2"/>
+    <rect x="304" y="413.2" width="192" height="16" rx="8" fill="#4a5361" opacity="0.75"/>
+
+    <path d="M 211 237.58 L 175 225.58 L 175 263.58000000000004 L 211 267.58000000000004 Z"
+                  fill="#1d344f" stroke="#151a21" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M 589 237.58 L 625 225.58 L 625 263.58000000000004 L 589 267.58000000000004 Z"
+                  fill="#1d344f" stroke="#151a21" stroke-width="2" stroke-linejoin="round"/>
+  <rect width="800" height="600" fill="url(#vig)"/>
 </svg>

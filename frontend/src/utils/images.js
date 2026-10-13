@@ -2,14 +2,14 @@
  * Central image configuration.
  *
  * Every image path in the application is either built here or referenced from
- * mock data via these helpers — nothing is hardcoded in JSX. To swap in the
- * real Car Kingdom photography, drop files into `public/images/` using the same
- * names; no component changes are required.
+ * mock data via these helpers — nothing is hardcoded in JSX.
  *
- * Placeholders are SVG because the demo has no real photography yet. When real
- * photos arrive you can either keep the .svg fallbacks or rename these paths —
- * they are defined once, here.
+ * Placeholders are SVG because the demo has no real photography yet. Real
+ * vehicle photographs are picked up automatically: see the note on
+ * `vehicleImage()` below.
  */
+
+import { VEHICLE_PHOTOS } from '../data/vehicle-photos.js'
 
 export const IMAGE_CATEGORIES = [
   'general',
@@ -36,10 +36,29 @@ export function getFallback(category = 'general') {
 
 /**
  * Builds a path to a vehicle image.
- * @param {string} slug  e.g. 'toyota-camry-2024'
+ *
+ * Returns real photography when `scripts/sync-vehicle-photos.mjs` has found any
+ * for this vehicle and frame, and the generated SVG placeholder otherwise. The
+ * choice is per frame, not per vehicle, so a gallery half-filled with photos
+ * still renders — the photographed slots show the car and the rest show the
+ * placeholder, rather than the whole gallery dropping to placeholders because
+ * one frame is missing.
+ *
+ * @param {string} slug  e.g. '2024-toyota-camry-se'
  * @param {number} index 1-based image number
  */
 export function vehicleImage(slug, index = 1) {
+  return VEHICLE_PHOTOS[slug]?.[index] ?? vehiclePlaceholder(slug, index)
+}
+
+/**
+ * The generated placeholder, ignoring photography.
+ *
+ * `generate-placeholders.mjs` writes and overwrites these files, so it must ask
+ * for them by name even once `vehicleImage()` has started returning a .webp —
+ * otherwise the pipeline would try to write SVG into a photo's path.
+ */
+export function vehiclePlaceholder(slug, index = 1) {
   return `/images/vehicles/${slug}-${index}.svg`
 }
 

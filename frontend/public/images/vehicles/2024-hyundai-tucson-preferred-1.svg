@@ -1,24 +1,112 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600" role="img" aria-label="2024 Hyundai Tucson">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600" role="presentation">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#eff5fb"/>
-      <stop offset="1" stop-color="#d7e5f5"/>
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f0f4f9"/>
+      <stop offset="0.58" stop-color="#dee6ef"/>
+      <stop offset="1" stop-color="#cbd6e2"/>
+    </linearGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c7d0dc"/>
+      <stop offset="0.5" stop-color="#b0bccb"/>
+      <stop offset="1" stop-color="#94a1b3"/>
+    </linearGradient>
+    <radialGradient id="pool" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="key" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vig" cx="0.5" cy="0.48" r="0.76">
+      <stop offset="0.55" stop-color="#10131a" stop-opacity="0"/>
+      <stop offset="1" stop-color="#10131a" stop-opacity="0.22"/>
+    </radialGradient>
+    <linearGradient id="paint" x1="0" y1="0" x2="0.16" y2="1">
+      <stop offset="0" stop-color="#a8adab"/>
+      <stop offset="0.3" stop-color="#676f6c"/>
+      <stop offset="0.62" stop-color="#4a5450"/>
+      <stop offset="1" stop-color="#292f2d"/>
+    </linearGradient>
+    <linearGradient id="paintLo" x1="0" y1="0" x2="0.2" y2="1">
+      <stop offset="0" stop-color="#414a46"/>
+      <stop offset="1" stop-color="#1f2322"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="0.28" y2="1">
+      <stop offset="0" stop-color="#b8cadc"/>
+      <stop offset="0.4" stop-color="#63768e"/>
+      <stop offset="1" stop-color="#2b3543"/>
+    </linearGradient>
+    <linearGradient id="steel" x1="0" y1="0" x2="0.34" y2="1">
+      <stop offset="0" stop-color="#f6f8fb"/>
+      <stop offset="0.34" stop-color="#ccd6e1"/>
+      <stop offset="0.68" stop-color="#98a6b8"/>
+      <stop offset="1" stop-color="#6a7889"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#eef2f7"/>
+      <stop offset="0.45" stop-color="#b9c4d2"/>
+      <stop offset="1" stop-color="#7b8a9c"/>
+    </linearGradient>
+    <linearGradient id="cabin" x1="0" y1="0" x2="0.2" y2="1">
+      <stop offset="0" stop-color="#4a5361"/>
+      <stop offset="1" stop-color="#191d24"/>
     </linearGradient>
   </defs>
-  <rect width="800" height="600" fill="url(#bg)"/>
-  <rect x="16" y="16" width="768" height="568" rx="20"
-        fill="none" stroke="#4a5450" stroke-opacity="0.18" stroke-width="2"/>
   
-  <g transform="translate(0, -10)">
-    <path d="M150 372 L150 330 Q150 308 172 306 L246 300 L300 242 Q312 228 330 228 L470 228 Q488 228 500 242 L554 300 L628 306 Q650 308 650 330 L650 372 Z"
-          fill="#4a5450" fill-opacity="0.14" stroke="#4a5450" stroke-width="14" stroke-linejoin="round"/>
-    <circle cx="248" cy="376" r="46" fill="none" stroke="#4a5450" stroke-width="14"/>
-    <circle cx="552" cy="376" r="46" fill="none" stroke="#4a5450" stroke-width="14"/>
-  </g>
-  <text x="400" y="500" text-anchor="middle"
-        font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="26"
-        font-weight="600" fill="#33475f">2024 Hyundai Tucson</text>
-  <text x="400" y="536" text-anchor="middle"
-        font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="19"
-        fill="#6b7d92">Preferred · Front view</text>
+  <rect width="800" height="600" fill="url(#wall)"/>
+  <rect y="420" width="800" height="180" fill="url(#floor)"/>
+  <rect y="419" width="800" height="2" fill="#8b97a8" opacity="0.45"/>
+  <ellipse cx="400" cy="452" rx="392" ry="78" fill="url(#pool)"/>
+  <ellipse cx="566" cy="86" rx="300" ry="232" fill="url(#key)"/>
+  <g transform="translate(400 500) scale(1.05) translate(-400 -500)">
+    
+  <ellipse cx="400" cy="498" rx="332" ry="24" fill="#2b3240" opacity="0.2"/>
+  <ellipse cx="400" cy="496" rx="258.96000000000004" ry="15" fill="#2b3240" opacity="0.22"/>
+    <path d="M 58 442 L 58 382 Q 58 366 82 366 L 232 366 L 312 258 L 566 258 L 648 356 L 718 356 Q 742 356 742 372 L 742 442 L 666 442 A 66 66 0 0 0 534 442 L 266 442 A 66 66 0 0 0 134 442 L 58 442 Z" fill="url(#paint)"/>
+    <path d="M 58 442 L 58 382 Q 58 366 82 366 L 232 366 L 312 258 L 566 258 L 648 356 L 718 356 Q 742 356 742 372 L 742 442 L 666 442 A 66 66 0 0 0 534 442 L 266 442 A 66 66 0 0 0 134 442 L 58 442 Z" fill="none" stroke="#212624" stroke-width="3" stroke-linejoin="round"/>
+    
+    <path d="M 338 344 L 358 272 L 544 272 L 620 344 Z" fill="url(#glass)"/>
+    <path d="M 338 344 L 358 272 L 544 272 L 620 344 Z" fill="none" stroke="#151a21" stroke-width="4" opacity="0.55"/>
+    <rect x="482" y="272" width="14" height="72" fill="#1c212a" opacity="0.9"/>
+    <path d="M 342 344 L 360 280"
+          stroke="#ffffff" stroke-width="5" opacity="0.28" stroke-linecap="round" fill="none"/>
+    
+    <path d="M 66 370 L 226 372"
+          stroke="#808785" stroke-width="5" opacity="0.5" stroke-linecap="round" fill="none"/>
+    <path d="M 98 354 L 606 350"
+          stroke="#ffffff" stroke-width="4" opacity="0.22" stroke-linecap="round" fill="none"/>
+    <path d="M 102 426 L 698 426"
+          stroke="#0f1218" stroke-width="10" opacity="0.22" fill="none"/>
+
+    <path d="M 61 370 L 102 378 L 96 396 L 61 390 Z"
+          fill="#dbe6f2" opacity="0.82" stroke="#8b9caf" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M 739 360 L 700 368 L 706 388 L 739 382 Z"
+          fill="#c8102e" stroke="#8f0a1f" stroke-width="2" stroke-linejoin="round"/>
+
+    <path d="M 477 350 L 477 422"
+          stroke="#0f1218" stroke-width="3" opacity="0.35" fill="none"/>
+    <path d="M 286 350 L 286 422"
+          stroke="#0f1218" stroke-width="3" opacity="0.3" fill="none"/>
+    <rect x="496" y="364" width="34" height="9" rx="4.5" fill="#cfd8e2" opacity="0.85"/>
+    <rect x="268" y="364" width="34" height="9" rx="4.5" fill="#cfd8e2" opacity="0.7"/>
+
+    <path d="M 324 340 l -30 -6 l -4 20 l 30 4 Z" fill="#343b38" stroke="#151a21" stroke-width="2"/>
+    
+  <circle cx="200" cy="442" r="64" fill="#0f1218" opacity="0.45"/>
+  <circle cx="200" cy="442" r="58" fill="#1b1f27"/>
+  <circle cx="200" cy="442" r="39.440000000000005" fill="url(#rim)"/>
+  <rect x="-9.28" y="-35.96" width="18.56" height="35.96" rx="9.28" transform="translate(200,442) rotate(0)" fill="url(#steel)"/><rect x="-9.28" y="-35.96" width="18.56" height="35.96" rx="9.28" transform="translate(200,442) rotate(72)" fill="url(#steel)"/><rect x="-9.28" y="-35.96" width="18.56" height="35.96" rx="9.28" transform="translate(200,442) rotate(144)" fill="url(#steel)"/><rect x="-9.28" y="-35.96" width="18.56" height="35.96" rx="9.28" transform="translate(200,442) rotate(216)" fill="url(#steel)"/><rect x="-9.28" y="-35.96" width="18.56" height="35.96" rx="9.28" transform="translate(200,442) rotate(288)" fill="url(#steel)"/>
+  <circle cx="200" cy="442" r="13.34" fill="url(#rim)"/>
+  <circle cx="200" cy="442" r="13.34" fill="none" stroke="#6a7889" stroke-width="2"/>
+  <circle cx="200.0" cy="464.0" r="4.35" fill="#59636f"/><circle cx="179.0" cy="448.8" r="4.35" fill="#59636f"/><circle cx="187.0" cy="424.2" r="4.35" fill="#59636f"/><circle cx="213.0" cy="424.2" r="4.35" fill="#59636f"/><circle cx="221.0" cy="448.8" r="4.35" fill="#59636f"/>
+    
+  <circle cx="600" cy="442" r="64" fill="#0f1218" opacity="0.45"/>
+  <circle cx="600" cy="442" r="58" fill="#1b1f27"/>
+  <circle cx="600" cy="442" r="39.440000000000005" fill="url(#rim)"/>
+  <rect x="-9.28" y="-35.96" width="18.56" height="35.96" rx="9.28" transform="translate(600,442) rotate(0)" fill="url(#steel)"/><rect x="-9.28" y="-35.96" width="18.56" height="35.96" rx="9.28" transform="translate(600,442) rotate(72)" fill="url(#steel)"/><rect x="-9.28" y="-35.96" width="18.56" height="35.96" rx="9.28" transform="translate(600,442) rotate(144)" fill="url(#steel)"/><rect x="-9.28" y="-35.96" width="18.56" height="35.96" rx="9.28" transform="translate(600,442) rotate(216)" fill="url(#steel)"/><rect x="-9.28" y="-35.96" width="18.56" height="35.96" rx="9.28" transform="translate(600,442) rotate(288)" fill="url(#steel)"/>
+  <circle cx="600" cy="442" r="13.34" fill="url(#rim)"/>
+  <circle cx="600" cy="442" r="13.34" fill="none" stroke="#6a7889" stroke-width="2"/>
+  <circle cx="600.0" cy="464.0" r="4.35" fill="#59636f"/><circle cx="579.0" cy="448.8" r="4.35" fill="#59636f"/><circle cx="587.0" cy="424.2" r="4.35" fill="#59636f"/><circle cx="613.0" cy="424.2" r="4.35" fill="#59636f"/><circle cx="621.0" cy="448.8" r="4.35" fill="#59636f"/></g>
+  <rect width="800" height="600" fill="url(#vig)"/>
 </svg>

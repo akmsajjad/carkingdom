@@ -8,7 +8,8 @@
     "build": "vite build",
     "drive": "node scripts/drive.mjs",
     "lint": "oxlint",
-    "images": "node scripts/generate-placeholders.mjs",
+    "images": "node scripts/generate-placeholders.mjs && node scripts/sync-vehicle-photos.mjs",
+    "photos": "node scripts/sync-vehicle-photos.mjs",
     "logo": "node scripts/generate-logo-assets.mjs",
     "preview": "vite preview"
   },

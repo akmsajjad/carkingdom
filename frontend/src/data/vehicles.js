@@ -48,6 +48,11 @@ function defineVehicle(spec) {
     ...spec,
     slug,
     title: `${spec.year} ${spec.make} ${spec.model} ${spec.trim}`,
+    // Stated rather than merely implied by `images.length`, because
+    // `vehicleFiles()` in `scripts/generate-placeholders.mjs` needs to know how
+    // many placeholder SVGs to draw even when real photographs have replaced
+    // the paths in `images` — see `scripts/sync-vehicle-photos.mjs`.
+    imageCount,
     images: Array.from({ length: imageCount }, (_, index) =>
       vehicleImage(slug, index + 1),
     ),

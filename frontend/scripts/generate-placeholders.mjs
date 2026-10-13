@@ -13,8 +13,12 @@
  *
  *     npm run images
  *
- * When real photography arrives, drop the files into the same paths and delete
- * the matching entry here; nothing in `src/` needs to change.
+ * When real photography arrives, drop the files into `public/images/vehicles/`
+ * under the names `vehicleImage()` asks for and run `npm run images`. The
+ * matching SVG keeps being written as the fallback — `OptimizedImage` swaps to
+ * it if a photo is missing or fails to load — and `vehicle.images` starts
+ * pointing at the photographs without any component or data change. See
+ * `scripts/sync-vehicle-photos.mjs`.
  */
 import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
@@ -23,6 +27,7 @@ import { VEHICLES } from '../src/data/vehicles.js'
 import { SERVICES } from '../src/data/services.js'
 import { PARTS } from '../src/data/parts.js'
 import { TEAM } from '../src/data/team.js'
+import { vehiclePlaceholder } from '../src/utils/images.js'
 
 const OUTPUT_ROOT = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -34,23 +39,20 @@ const OUTPUT_ROOT = join(
 const WIDTH = 800
 const HEIGHT = 600
 
-/** A side-view car, used for the vehicles category and every vehicle gallery. */
+/**
+ * A side-view car, used only for `vehicles/default.svg`.
+ *
+ * Every actual vehicle gallery frame is drawn by `vehicleSvg()`. This one stays
+ * because the fallback image is not tied to a record — it is what shows when an
+ * image 404s or a vehicle has none — so a generic outline with no body type and
+ * no paint is the honest drawing for it.
+ */
 const carGlyph = (stroke) => `
   <g transform="translate(0, -10)">
     <path d="M150 372 L150 330 Q150 308 172 306 L246 300 L300 242 Q312 228 330 228 L470 228 Q488 228 500 242 L554 300 L628 306 Q650 308 650 330 L650 372 Z"
           fill="${stroke}" fill-opacity="0.14" stroke="${stroke}" stroke-width="14" stroke-linejoin="round"/>
     <circle cx="248" cy="376" r="46" fill="none" stroke="${stroke}" stroke-width="14"/>
     <circle cx="552" cy="376" r="46" fill="none" stroke="${stroke}" stroke-width="14"/>
-  </g>`
-
-/** Steering wheel, used for the "Interior" frame of a vehicle gallery. */
-const interiorGlyph = (stroke) => `
-  <g transform="translate(0, -10)" fill="none" stroke="${stroke}" stroke-width="14"
-     stroke-linecap="round" stroke-linejoin="round">
-    <circle cx="400" cy="330" r="130"/>
-    <circle cx="400" cy="330" r="42"/>
-    <path d="M270 330 L358 330"/><path d="M442 330 L530 330"/>
-    <path d="M400 372 L400 460"/>
   </g>`
 
 const GLYPHS = {
@@ -129,10 +131,19 @@ const PAINT = {
   'Lightning Blue': '#1f5fa8',
 }
 
-/** What each frame of a vehicle gallery is meant to show. */
+/**
+ * What each frame of a vehicle gallery is meant to show.
+ *
+ * The side profile leads on purpose. Frame 1 is what `VehicleCard` shows as the
+ * thumbnail, and the side elevation is the only view that tells a sedan from an
+ * SUV from a pickup at card size — head-on, a RAV4 and a Camry are nearly the
+ * same rectangle. Leading with the view that identifies the vehicle is the
+ * point of the exercise. Nothing user-facing depends on this order: the gallery
+ * captions its images "photo N of M", so reordering is invisible.
+ */
 const GALLERY_FRAMES = [
-  'Front view',
   'Side profile',
+  'Front view',
   'Interior',
   'Rear view',
   'Wheels & trim',
@@ -164,14 +175,23 @@ function escapeXml(value) {
 }
 
 /**
- * A file carrying `scene` gets the scene template instead of the label template,
- * and ignores every other field — the service images are the only files drawn
- * that way, and the two templates share nothing: no caption, no border, and a
- * different backdrop. Branching here rather than at the call site keeps `main()`
- * writing a single uniform list.
+ * Three templates, chosen by which field the file carries.
+ *
+ * A file with neither `scene` nor `vehicle` gets the label template: a tinted
+ * glyph on a light card with the record's name and subtitle printed on it. That
+ * is right for a part or a team portrait, where the label *is* the content.
+ *
+ * A file with `scene` gets the workshop template — the nine service images.
+ * A file with `vehicle` gets the vehicle template.
+ *
+ * Those two share nothing with the label template or with each other: no
+ * caption, no border, and their own backdrops. Branching here rather than at the
+ * call site keeps `main()` writing a single uniform list, and means adding a
+ * fourth kind of image later is one line here plus one new function.
  */
-function svg({ category, label, sublabel, stroke, glyph, scene }) {
+function svg({ category, label, sublabel, stroke, glyph, scene, vehicle }) {
   if (scene) return sceneSvg(scene)
+  if (vehicle) return vehicleSvg(vehicle)
 
   const body = glyph ?? GLYPHS[category] ?? GLYPHS.general
   const title = escapeXml(label)
@@ -727,6 +747,562 @@ function sceneSvg(body) {
 `
 }
 
+/* ==========================================================================
+   Vehicle artwork
+   ==========================================================================
+   Every vehicle placeholder used to be one `carGlyph` silhouette, tinted by
+   exterior colour. All 125 frames across 25 vehicles shared a single profile —
+   a RAV4, an F-150 and a Camry drew the same shape — and only the paint told
+   them apart, which is the "same generic image for every vehicle" problem in
+   its purest form. The frame name was the only thing distinguishing a "Front
+   view" from a "Side profile".
+
+   Three things are parameterised instead:
+
+   1. `BODY_SHAPES` — proportions per body type, which is what actually makes a
+      truck look like a truck. Roof height, bonnet length, wheel size, ground
+      clearance and rear overhang all move together; a boxy silhouette with a
+      high roof and short bonnet reads as an SUV, and the same drawing with a
+      long bonnet and a low roof reads as a sedan.
+   2. The paint, as a gradient rather than a flat fill. A flat tint has no
+      light in it, which is most of why the old placeholders read as icons.
+   3. The frame, as a genuinely different drawing rather than a different
+      caption — a side elevation, a head-on front, a head-on rear, a wheel
+      close-up and an interior.
+
+   These are still illustrations, not photographs — see the header of
+   `scripts/sync-vehicle-photos.mjs` for how real photography replaces them
+   without a code change. What they are not is 125 copies of one outline.
+   ========================================================================== */
+
+const hexToRgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16))
+
+const rgbToHex = (rgb) =>
+  '#' +
+  rgb
+    .map((v) => Math.round(Math.min(255, Math.max(0, v))).toString(16).padStart(2, '0'))
+    .join('')
+
+const lighten = (hex, amount) =>
+  rgbToHex(hexToRgb(hex).map((v) => v + (255 - v) * amount))
+
+const darken = (hex, amount) => rgbToHex(hexToRgb(hex).map((v) => v * (1 - amount)))
+
+/** Where every wheel touches the floor. The horizon sits above it. */
+const GROUND = 500
+
+/**
+ * Proportions per body type.
+ *
+ * The first block drives `sideProfile`, the second `faceView`. They are kept
+ * together so a body type can be reasoned about as one thing rather than two
+ * half-descriptions in different places.
+ */
+const BODY_SHAPES = {
+  Sedan: {
+    // side
+    front: 62, rear: 738, wheelR: 50, archR: 58,
+    frontWheelX: 196, rearWheelX: 604,
+    bonnetY: 396, cowlX: 244, aPillarX: 330, roofY: 302,
+    cPillarX: 520, rearScreenX: 616, deckY: 386, beltY: 372,
+    // face — 1.84 m x 1.45 m at 210 px/m
+    faceW: 386, faceH: 305, roofFactor: 0.60, cowlFactor: 0.88,
+  },
+  SUV: {
+    front: 58, rear: 742, wheelR: 58, archR: 66,
+    frontWheelX: 200, rearWheelX: 600,
+    bonnetY: 366, cowlX: 232, aPillarX: 312, roofY: 258,
+    cPillarX: 566, rearScreenX: 648, deckY: 356, beltY: 344,
+    // face — 1.86 m x 1.69 m
+    faceW: 390, faceH: 354, roofFactor: 0.72, cowlFactor: 0.92,
+  },
+  Truck: {
+    front: 54, rear: 746, wheelR: 60, archR: 68,
+    frontWheelX: 190, rearWheelX: 612,
+    // The bed rail is the "deck": a vertical drop from the roof at `cPillarX`
+    // gives the flat back-of-cab and the open bed in one path.
+    bonnetY: 352, cowlX: 218, aPillarX: 288, roofY: 244,
+    cPillarX: 420, rearScreenX: 420, deckY: 348, beltY: 330,
+    // face — 2.03 m x 1.95 m
+    faceW: 426, faceH: 410, roofFactor: 0.78, cowlFactor: 0.94,
+  },
+  Hatchback: {
+    front: 78, rear: 722, wheelR: 48, archR: 56,
+    frontWheelX: 204, rearWheelX: 596,
+    // The screen runs almost to the tail and the "deck" is barely below the
+    // belt, so the rear reads as a hatch rather than the notchback a longer
+    // deck was giving.
+    bonnetY: 394, cowlX: 246, aPillarX: 332, roofY: 306,
+    cPillarX: 566, rearScreenX: 700, deckY: 408, beltY: 374,
+    // face — 1.80 m x 1.42 m
+    faceW: 378, faceH: 298, roofFactor: 0.58, cowlFactor: 0.86,
+  },
+  Wagon: {
+    front: 62, rear: 738, wheelR: 50, archR: 58,
+    frontWheelX: 192, rearWheelX: 612,
+    bonnetY: 396, cowlX: 242, aPillarX: 326, roofY: 300,
+    cPillarX: 636, rearScreenX: 682, deckY: 388, beltY: 372,
+    // face — 1.86 m x 1.68 m
+    faceW: 390, faceH: 353, roofFactor: 0.68, cowlFactor: 0.90,
+  },
+  Minivan: {
+    front: 60, rear: 740, wheelR: 54, archR: 62,
+    frontWheelX: 196, rearWheelX: 606,
+    bonnetY: 372, cowlX: 212, aPillarX: 286, roofY: 250,
+    cPillarX: 648, rearScreenX: 692, deckY: 368, beltY: 344,
+    // face — 1.99 m x 1.75 m
+    faceW: 418, faceH: 368, roofFactor: 0.76, cowlFactor: 0.94,
+  },
+}
+
+/** Showroom lighting and the paint gradients, rebuilt per vehicle colour. */
+const showroomDefs = (paint) => `
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f0f4f9"/>
+      <stop offset="0.58" stop-color="#dee6ef"/>
+      <stop offset="1" stop-color="#cbd6e2"/>
+    </linearGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c7d0dc"/>
+      <stop offset="0.5" stop-color="#b0bccb"/>
+      <stop offset="1" stop-color="#94a1b3"/>
+    </linearGradient>
+    <radialGradient id="pool" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="key" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vig" cx="0.5" cy="0.48" r="0.76">
+      <stop offset="0.55" stop-color="#10131a" stop-opacity="0"/>
+      <stop offset="1" stop-color="#10131a" stop-opacity="0.22"/>
+    </radialGradient>
+    <linearGradient id="paint" x1="0" y1="0" x2="0.16" y2="1">
+      <stop offset="0" stop-color="${lighten(paint, 0.52)}"/>
+      <stop offset="0.3" stop-color="${lighten(paint, 0.16)}"/>
+      <stop offset="0.62" stop-color="${paint}"/>
+      <stop offset="1" stop-color="${darken(paint, 0.44)}"/>
+    </linearGradient>
+    <linearGradient id="paintLo" x1="0" y1="0" x2="0.2" y2="1">
+      <stop offset="0" stop-color="${darken(paint, 0.12)}"/>
+      <stop offset="1" stop-color="${darken(paint, 0.58)}"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="0.28" y2="1">
+      <stop offset="0" stop-color="#b8cadc"/>
+      <stop offset="0.4" stop-color="#63768e"/>
+      <stop offset="1" stop-color="#2b3543"/>
+    </linearGradient>
+    <linearGradient id="steel" x1="0" y1="0" x2="0.34" y2="1">
+      <stop offset="0" stop-color="#f6f8fb"/>
+      <stop offset="0.34" stop-color="#ccd6e1"/>
+      <stop offset="0.68" stop-color="#98a6b8"/>
+      <stop offset="1" stop-color="#6a7889"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#eef2f7"/>
+      <stop offset="0.45" stop-color="#b9c4d2"/>
+      <stop offset="1" stop-color="#7b8a9c"/>
+    </linearGradient>
+    <linearGradient id="cabin" x1="0" y1="0" x2="0.2" y2="1">
+      <stop offset="0" stop-color="#4a5361"/>
+      <stop offset="1" stop-color="#191d24"/>
+    </linearGradient>`
+
+/** The showroom itself: wall, floor, seam, light pool, key light. */
+const showroomBackdrop = `
+  <rect width="${WIDTH}" height="${HEIGHT}" fill="url(#wall)"/>
+  <rect y="420" width="${WIDTH}" height="${HEIGHT - 420}" fill="url(#floor)"/>
+  <rect y="419" width="${WIDTH}" height="2" fill="#8b97a8" opacity="0.45"/>
+  <ellipse cx="400" cy="452" rx="392" ry="78" fill="url(#pool)"/>
+  <ellipse cx="566" cy="86" rx="300" ry="232" fill="url(#key)"/>`
+
+/** Contact shadow. Two ellipses so the edge is soft rather than a hard rim. */
+const carShadow = (rx) => `
+  <ellipse cx="400" cy="${GROUND - 2}" rx="${rx}" ry="24" fill="#2b3240" opacity="0.2"/>
+  <ellipse cx="400" cy="${GROUND - 4}" rx="${rx * 0.78}" ry="15" fill="#2b3240" opacity="0.22"/>`
+
+/** One wheel: tyre, rim, spokes, hub, lug nuts. */
+const wheelAt = (cx, cy, r) => `
+  <circle cx="${cx}" cy="${cy}" r="${r + 6}" fill="#0f1218" opacity="0.45"/>
+  <circle cx="${cx}" cy="${cy}" r="${r}" fill="#1b1f27"/>
+  <circle cx="${cx}" cy="${cy}" r="${r * 0.68}" fill="url(#rim)"/>
+  ${spokes(cx, cy, 5, r * 0.62, r * 0.32)}
+  <circle cx="${cx}" cy="${cy}" r="${r * 0.23}" fill="url(#rim)"/>
+  <circle cx="${cx}" cy="${cy}" r="${r * 0.23}" fill="none" stroke="#6a7889" stroke-width="2"/>
+  ${boltRing(cx, cy, r * 0.38, r * 0.075, 5, 90, '#59636f')}`
+
+/** The greenhouse: glass following the roofline, with a B-pillar. */
+const greenhouse = (s) => {
+  const top = s.roofY + 14
+  const glass = [
+    `M ${s.aPillarX + 26} ${s.beltY}`,
+    `L ${s.aPillarX + 46} ${top}`,
+    `L ${s.cPillarX - 22} ${top}`,
+    `L ${s.rearScreenX - 28} ${s.beltY}`,
+    'Z',
+  ].join(' ')
+  const pillarX = (s.aPillarX + 46 + (s.rearScreenX - 28)) / 2
+
+  return `
+    <path d="${glass}" fill="url(#glass)"/>
+    <path d="${glass}" fill="none" stroke="#151a21" stroke-width="4" opacity="0.55"/>
+    <rect x="${pillarX - 7}" y="${top}" width="14" height="${s.beltY - top}" fill="#1c212a" opacity="0.9"/>
+    <path d="M ${s.aPillarX + 30} ${s.beltY} L ${s.aPillarX + 48} ${top + 8}"
+          stroke="#ffffff" stroke-width="5" opacity="0.28" stroke-linecap="round" fill="none"/>`
+}
+
+/** Lights, doors, handles, mirror, sill shadow and shoulder highlight. */
+const sideDetails = (s, paint) => {
+  const sillY = GROUND - s.wheelR
+  const doorX = (s.aPillarX + s.rearScreenX) / 2
+  const sillTop = sillY - 16
+
+  return `
+    <path d="M ${s.front + 8} ${s.bonnetY + 4} L ${s.cowlX - 6} ${s.bonnetY + 6}"
+          stroke="${lighten(paint, 0.3)}" stroke-width="5" opacity="0.5" stroke-linecap="round" fill="none"/>
+    <path d="M ${s.front + 40} ${s.beltY + 10} L ${s.cPillarX + 40} ${s.beltY + 6}"
+          stroke="#ffffff" stroke-width="4" opacity="0.22" stroke-linecap="round" fill="none"/>
+    <path d="M ${s.front + 44} ${sillTop} L ${s.rear - 44} ${sillTop}"
+          stroke="#0f1218" stroke-width="10" opacity="0.22" fill="none"/>
+
+    <path d="M ${s.front + 3} ${s.bonnetY + 4} L ${s.front + 44} ${s.bonnetY + 12} L ${s.front + 38} ${s.bonnetY + 30} L ${s.front + 3} ${s.bonnetY + 24} Z"
+          fill="#dbe6f2" opacity="0.82" stroke="#8b9caf" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M ${s.rear - 3} ${s.deckY + 4} L ${s.rear - 42} ${s.deckY + 12} L ${s.rear - 36} ${s.deckY + 32} L ${s.rear - 3} ${s.deckY + 26} Z"
+          fill="#c8102e" stroke="#8f0a1f" stroke-width="2" stroke-linejoin="round"/>
+
+    <path d="M ${doorX - 3} ${s.beltY + 6} L ${doorX - 3} ${sillTop - 4}"
+          stroke="#0f1218" stroke-width="3" opacity="0.35" fill="none"/>
+    <path d="M ${s.aPillarX - 26} ${s.beltY + 6} L ${s.aPillarX - 26} ${sillTop - 4}"
+          stroke="#0f1218" stroke-width="3" opacity="0.3" fill="none"/>
+    <rect x="${doorX + 16}" y="${s.beltY + 20}" width="34" height="9" rx="4.5" fill="#cfd8e2" opacity="0.85"/>
+    <rect x="${s.aPillarX - 44}" y="${s.beltY + 20}" width="34" height="9" rx="4.5" fill="#cfd8e2" opacity="0.7"/>
+
+    <path d="M ${s.aPillarX + 12} ${s.beltY - 4} l -30 -6 l -4 20 l 30 4 Z" fill="${darken(paint, 0.3)}" stroke="#151a21" stroke-width="2"/>`
+}
+
+/**
+ * Scales a drawing about the point where the tyres meet the floor.
+ *
+ * The side profile is drawn at true proportions, which leaves a third of the
+ * canvas as empty wall above the roof — the shape is right but it sits small in
+ * frame. Scaling about the ground contact keeps the wheels planted and the
+ * shadow in place while filling the frame the way a listing photo does.
+ * The front and rear elevations need no such help: `faceH` already sizes them.
+ */
+const grounded = (inner, scale) =>
+  `<g transform="translate(400 ${GROUND}) scale(${scale}) translate(-400 ${-GROUND})">${inner}</g>`
+
+/** Side elevation. */
+const sideProfile = (paint, s) => {
+  const sillY = GROUND - s.wheelR
+  const body = [
+    `M ${s.front} ${sillY}`,
+    `L ${s.front} ${s.bonnetY + 16}`,
+    `Q ${s.front} ${s.bonnetY} ${s.front + 24} ${s.bonnetY}`,
+    `L ${s.cowlX} ${s.bonnetY}`,
+    `L ${s.aPillarX} ${s.roofY}`,
+    `L ${s.cPillarX} ${s.roofY}`,
+    `L ${s.rearScreenX} ${s.deckY}`,
+    `L ${s.rear - 24} ${s.deckY}`,
+    `Q ${s.rear} ${s.deckY} ${s.rear} ${s.deckY + 16}`,
+    `L ${s.rear} ${sillY}`,
+    `L ${s.rearWheelX + s.archR} ${sillY}`,
+    `A ${s.archR} ${s.archR} 0 0 0 ${s.rearWheelX - s.archR} ${sillY}`,
+    `L ${s.frontWheelX + s.archR} ${sillY}`,
+    `A ${s.archR} ${s.archR} 0 0 0 ${s.frontWheelX - s.archR} ${sillY}`,
+    `L ${s.front} ${sillY}`,
+    'Z',
+  ].join(' ')
+
+  return grounded(
+    `
+    ${carShadow((s.rear - s.front) / 2 - 10)}
+    <path d="${body}" fill="url(#paint)"/>
+    <path d="${body}" fill="none" stroke="${darken(paint, 0.55)}" stroke-width="3" stroke-linejoin="round"/>
+    ${greenhouse(s)}
+    ${sideDetails(s, paint)}
+    ${wheelAt(s.frontWheelX, sillY, s.wheelR)}
+    ${wheelAt(s.rearWheelX, sillY, s.wheelR)}`,
+    1.05,
+  )
+}
+
+/**
+ * Head-on front and rear elevations.
+ *
+ * One function for both: the silhouette is identical, and swapping the
+ * treatment of the lamps, the screen and the lower bumper is the whole
+ * difference between a car facing you and one driving away.
+ *
+ * Everything is a fraction of `faceH` — the real roof-to-ground height of the
+ * body type at 210 px/m — so a pickup is genuinely taller in frame than a
+ * hatchback rather than being the same shape scaled. The old version had a
+ * fixed 2:1 width-to-height ratio and the car occupied under a quarter of the
+ * canvas, which is why it read as a wide, flat icon.
+ */
+const faceView = (paint, s, mode) => {
+  const front = mode === 'front'
+  const halfW = s.faceW / 2
+  const roofY = GROUND - s.faceH
+  const at = (fraction) => roofY + s.faceH * fraction
+
+  const yCowl = at(0.27)
+  const yGrilleTop = at(0.42)
+  const yBumperTop = at(0.68)
+  const yBumper = at(0.8)
+
+  const wRoof = halfW * s.roofFactor
+  const wCowl = halfW * s.cowlFactor
+
+  const body = [
+    `M ${400 - halfW} ${yBumper}`,
+    `L ${400 - halfW} ${yCowl + 34}`,
+    `Q ${400 - halfW} ${yCowl} ${400 - wCowl} ${yCowl}`,
+    `L ${400 - wRoof - 28} ${roofY + 36}`,
+    `Q ${400 - wRoof} ${roofY} ${400 - wRoof + 32} ${roofY}`,
+    `L ${400 + wRoof - 32} ${roofY}`,
+    `Q ${400 + wRoof} ${roofY} ${400 + wRoof + 28} ${roofY + 36}`,
+    `L ${400 + wCowl} ${yCowl}`,
+    `Q ${400 + halfW} ${yCowl} ${400 + halfW} ${yCowl + 34}`,
+    `L ${400 + halfW} ${yBumper}`,
+    'Z',
+  ].join(' ')
+
+  const glass = [
+    `M ${400 - wRoof - 6} ${roofY + 14}`,
+    `L ${400 + wRoof + 6} ${roofY + 14}`,
+    `L ${400 + wCowl - 26} ${yCowl - 6}`,
+    `L ${400 - wCowl + 26} ${yCowl - 6}`,
+    'Z',
+  ].join(' ')
+
+  const lamp = (side) => {
+    const outer = 400 + side * (halfW - 20)
+    const inner = 400 + side * (halfW - 122)
+    return `<rect x="${Math.min(outer, inner)}" y="${yGrilleTop - 20}" width="102" height="34" rx="14"
+                  fill="${front ? '#eef4fa' : '#c8102e'}"
+                  stroke="${front ? '#93a4b7' : '#8f0a1f'}" stroke-width="2"/>`
+  }
+
+  const mirror = (side) => {
+    const x = 400 + side * (halfW - 6)
+    const tip = 400 + side * (halfW + 30)
+    return `<path d="M ${x} ${yCowl - 4} L ${tip} ${yCowl - 16} L ${tip} ${yCowl + 22} L ${x} ${yCowl + 26} Z"
+                  fill="${darken(paint, 0.38)}" stroke="#151a21" stroke-width="2" stroke-linejoin="round"/>`
+  }
+
+  return `
+    ${carShadow(halfW - 4)}
+    <!-- Tyres sit behind the body, so only the part below the bumper shows —
+         which is exactly what a tyre looks like head-on. -->
+    <rect x="${400 - halfW + 12}" y="${yBumper - 46}" width="52" height="${GROUND - yBumper + 46}" rx="16" fill="#15181e"/>
+    <rect x="${400 + halfW - 64}" y="${yBumper - 46}" width="52" height="${GROUND - yBumper + 46}" rx="16" fill="#15181e"/>
+    <path d="${body}" fill="url(#paint)"/>
+    <path d="${body}" fill="none" stroke="${darken(paint, 0.55)}" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M ${400 - wRoof + 34} ${roofY + 9} L ${400 + wRoof - 34} ${roofY + 9}"
+          stroke="${lighten(paint, 0.46)}" stroke-width="6" opacity="0.32" stroke-linecap="round" fill="none"/>
+    <path d="${glass}" fill="url(#glass)" stroke="#151a21" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M ${400 - wCowl + 32} ${yCowl - 10} L ${400 + wCowl - 32} ${yCowl - 10}"
+          stroke="#0f1218" stroke-width="10" opacity="0.35" stroke-linecap="round" fill="none"/>
+    <path d="M ${400 - halfW + 22} ${yGrilleTop - 30} L ${400 + halfW - 22} ${yGrilleTop - 30}"
+          stroke="${lighten(paint, 0.3)}" stroke-width="5" opacity="0.38" stroke-linecap="round" fill="none"/>
+
+    ${lamp(-1)}
+    ${lamp(1)}
+    <rect x="${400 - 86}" y="${yGrilleTop}" width="172" height="${yBumperTop - yGrilleTop - 8}" rx="14" fill="#141a21"/>
+    <g fill="#39424f">
+      <rect x="${400 - 76}" y="${yGrilleTop + 14}" width="152" height="7" rx="3.5"/>
+      <rect x="${400 - 76}" y="${yGrilleTop + 32}" width="152" height="7" rx="3.5"/>
+      <rect x="${400 - 76}" y="${yGrilleTop + 50}" width="152" height="7" rx="3.5"/>
+    </g>
+    <rect x="${400 - 34}" y="${yGrilleTop + (yBumperTop - yGrilleTop) / 2 - 16}" width="68" height="26" rx="6"
+          fill="${darken(paint, 0.5)}"/>
+    <rect x="${400 - halfW + 20}" y="${yBumperTop}" width="${halfW * 2 - 40}" height="${yBumper - yBumperTop}" rx="16"
+          fill="${darken(paint, 0.48)}"/>
+    <rect x="${400 - 64}" y="${yBumperTop + 22}" width="128" height="28" rx="8" fill="#e8eef5" stroke="#93a4b7" stroke-width="2"/>
+    <rect x="${400 - 96}" y="${yBumper - 16}" width="192" height="16" rx="8" fill="#4a5361" opacity="0.75"/>
+
+    ${mirror(-1)}
+    ${mirror(1)}`
+}
+
+/** Wheel and tyre close-up, with the vehicle's paint on the caliper. */
+const wheelView = (paint) => {
+  const r = 168
+  return `
+    ${carShadow(210)}
+    <circle cx="400" cy="330" r="${r + 8}" fill="#0f1218" opacity="0.45"/>
+    <circle cx="400" cy="330" r="${r}" fill="#1b1f27"/>
+    <circle cx="400" cy="330" r="${r - 16}" fill="none" stroke="#0c0e14" stroke-width="30"
+            stroke-dasharray="30 22" opacity="0.85"/>
+    <circle cx="400" cy="330" r="${r - 42}" fill="none" stroke="#6d7889" stroke-width="3" opacity="0.45"/>
+    <circle cx="400" cy="330" r="${r - 58}" fill="url(#rim)"/>
+    <circle cx="400" cy="330" r="${r - 68}" fill="#39424f"/>
+    ${spokes(400, 330, 5, r - 72, 40)}
+    <circle cx="400" cy="330" r="42" fill="url(#rim)"/>
+    ${boltRing(400, 330, 62, 9, 5, 90, '#1d222b')}
+    <circle cx="400" cy="330" r="18" fill="${paint}"/>
+    <circle cx="400" cy="330" r="18" fill="none" stroke="${darken(paint, 0.45)}" stroke-width="3"/>
+    <!-- Brake caliper: an arc band straddling the disc at 3 o'clock, not the
+         free-floating blob the first pass drew. -->
+    <path d="M 531.8 219.4 A 172 172 0 0 1 531.8 440.6 L 490.4 405.8 A 118 118 0 0 0 490.4 254.2 Z"
+          fill="${paint}" stroke="${darken(paint, 0.45)}" stroke-width="3" stroke-linejoin="round"/>
+    <rect x="512" y="286" width="42" height="88" rx="12" fill="${darken(paint, 0.42)}"/>`
+}
+
+/**
+ * Interior: windscreen, dash, cluster, console, wheel, seats.
+ *
+ * Lit from the windscreen end rather than flatly dark — a cabin drawn in five
+ * near-identical greys has no readable depth, which is what the first pass of
+ * this looked like.
+ */
+const interiorView = (paint) => `
+  <rect width="${WIDTH}" height="${HEIGHT}" fill="#2b3341"/>
+  <path d="M 0 0 h 800 v 214 q -400 74 -800 0 Z" fill="url(#glass)"/>
+  <path d="M 0 0 h 800 v 214 q -400 74 -800 0 Z" fill="none" stroke="#0d1117" stroke-width="6"/>
+  <path d="M 0 176 q 400 74 800 0 v 96 q -400 70 -800 0 Z" fill="#46505f"/>
+  <path d="M 40 250 q 360 66 720 0 l -8 78 q -352 62 -704 0 Z" fill="#333c49"/>
+  <rect x="286" y="192" width="228" height="112" rx="16" fill="#0e1219" stroke="#5b6779" stroke-width="3"/>
+  <circle cx="346" cy="248" r="38" fill="#1b222c" stroke="#8b98a9" stroke-width="4"/>
+  <path d="M 346 248 L 366 226" stroke="#eef3f9" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="454" cy="248" r="38" fill="#1b222c" stroke="#8b98a9" stroke-width="4"/>
+  <path d="M 454 248 L 438 222" stroke="#eef3f9" stroke-width="5" stroke-linecap="round"/>
+  <rect x="404" y="222" width="40" height="56" rx="6" fill="#4f9ad4"/>
+  <circle cx="400" cy="392" r="132" fill="none" stroke="#0e1219" stroke-width="32"/>
+  <circle cx="400" cy="392" r="132" fill="none" stroke="${paint}" stroke-width="12"/>
+  <circle cx="400" cy="392" r="46" fill="#232b36" stroke="#8b98a9" stroke-width="4"/>
+  <circle cx="400" cy="392" r="14" fill="${lighten(paint, 0.3)}"/>
+  <path d="M 268 392 L 356 392" stroke="#232b36" stroke-width="24" stroke-linecap="round"/>
+  <path d="M 444 392 L 532 392" stroke="#232b36" stroke-width="24" stroke-linecap="round"/>
+  <path d="M 400 438 L 400 514" stroke="#232b36" stroke-width="24" stroke-linecap="round"/>
+  <rect x="358" y="288" width="84" height="26" rx="9" fill="${darken(paint, 0.3)}"/>
+  <rect x="196" y="316" width="150" height="230" rx="26" fill="#333c49" stroke="#5b6779" stroke-width="3"/>
+  <rect x="216" y="336" width="110" height="70" rx="18" fill="#414b5a"/>
+  <rect x="454" y="316" width="150" height="230" rx="26" fill="#333c49" stroke="#5b6779" stroke-width="3"/>
+  <rect x="474" y="336" width="110" height="70" rx="18" fill="#414b5a"/>
+  <rect x="128" y="266" width="128" height="96" rx="30" fill="#2a323d" stroke="#5b6779" stroke-width="3"/>
+  <rect x="544" y="266" width="128" height="96" rx="30" fill="#2a323d" stroke="#5b6779" stroke-width="3"/>
+  <rect x="332" y="470" width="136" height="86" rx="14" fill="#232b36" stroke="#5b6779" stroke-width="3"/>
+  <rect x="352" y="486" width="96" height="20" rx="8" fill="#4f9ad4" opacity="0.8"/>
+  <g fill="#8b98a9">
+    <circle cx="360" cy="526" r="9"/><circle cx="392" cy="526" r="9"/><circle cx="424" cy="526" r="9"/>
+  </g>`
+
+/** Instrument cluster close-up. */
+const dashboardView = (paint) => `
+  <rect width="${WIDTH}" height="${HEIGHT}" fill="#171c24"/>
+  <rect x="96" y="150" width="608" height="300" rx="34" fill="#10151c" stroke="#3d4653" stroke-width="4"/>
+  ${[
+    { cx: 266, angle: -50 },
+    { cx: 400, angle: 0 },
+    { cx: 534, angle: 40 },
+  ]
+    .map(
+      (dial, index) => `
+    <circle cx="${dial.cx}" cy="300" r="${index === 1 ? 104 : 92}" fill="#161c24" stroke="#4a5361" stroke-width="4"/>
+    <circle cx="${dial.cx}" cy="300" r="${index === 1 ? 88 : 76}" fill="none" stroke="#5f6c7f"
+            stroke-width="4" stroke-dasharray="3 13"/>
+    ${
+      index === 2
+        ? `<circle cx="${dial.cx}" cy="300" r="${index === 1 ? 92 : 80}" fill="none" stroke="#c8102e"
+                   stroke-width="9" stroke-dasharray="58 445" transform="rotate(-58 ${dial.cx} 300)"/>`
+        : ''
+    }
+    <path d="M ${dial.cx} 300 L ${dial.cx + 58 * Math.cos((dial.angle * Math.PI) / 180)} ${300 + 58 * Math.sin((dial.angle * Math.PI) / 180)}"
+          stroke="#e6edf5" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="${dial.cx}" cy="300" r="11" fill="${paint}"/>
+  `,
+    )
+    .join('')}
+  <rect x="352" y="392" width="96" height="42" rx="10" fill="#2f6f9e" opacity="0.55"/>
+  <g fill="#39424f">
+    <rect x="140" y="486" width="120" height="16" rx="8"/>
+    <rect x="284" y="486" width="120" height="16" rx="8"/>
+    <rect x="428" y="486" width="120" height="16" rx="8"/>
+    <rect x="572" y="486" width="88" height="16" rx="8"/>
+  </g>`
+
+/** Open tailgate onto the load bay. */
+const cargoView = (paint) => `
+  <rect width="${WIDTH}" height="${HEIGHT}" fill="url(#wall)"/>
+  <rect y="420" width="${WIDTH}" height="${HEIGHT - 420}" fill="url(#floor)"/>
+  <rect y="419" width="${WIDTH}" height="2" fill="#8b97a8" opacity="0.45"/>
+  ${carShadow(250)}
+  <path d="M 150 236 h 500 q 24 0 24 24 v 190 q 0 24 -24 24 h -500 q -24 0 -24 -24 v -190 q 0 -24 24 -24 Z"
+        fill="url(#paint)" stroke="${darken(paint, 0.55)}" stroke-width="3"/>
+  <path d="M 182 268 h 436 v 150 h -436 Z" fill="#1a1f27"/>
+  <path d="M 182 268 h 436 v 42 h -436 Z" fill="#2c3440"/>
+  <path d="M 182 418 v 32 q 218 22 436 0 v -32 Z" fill="#2a313c"/>
+  <rect x="126" y="252" width="34" height="200" rx="12" fill="#c8102e"/>
+  <rect x="640" y="252" width="34" height="200" rx="12" fill="#c8102e"/>
+  <path d="M 400 176 v 60" stroke="#3d4653" stroke-width="8" stroke-linecap="round"/>
+  <path d="M 150 470 h 500" stroke="#0f1218" stroke-width="14" opacity="0.3" stroke-linecap="round"/>`
+
+/** Engine bay, in the vehicle's paint on the car it belongs to. */
+const engineView = (paint) => `
+  <rect width="${WIDTH}" height="${HEIGHT}" fill="#232a33"/>
+  <rect x="60" y="150" width="680" height="330" rx="20" fill="#1a1f27" stroke="#3d4653" stroke-width="4"/>
+  <path d="M 132 300 h 372 v 116 q 0 18 -18 18 h -336 q -18 0 -18 -18 Z" fill="url(#steel)"/>
+  <path d="M 132 300 h 372 v 116 q 0 18 -18 18 h -336 q -18 0 -18 -18 Z" fill="none" stroke="#5f6c7f" stroke-width="3"/>
+  <g>
+    <ellipse cx="196" cy="300" rx="36" ry="13" fill="#0d1015" stroke="url(#steel)" stroke-width="5"/>
+    <ellipse cx="286" cy="300" rx="36" ry="13" fill="#0d1015" stroke="url(#steel)" stroke-width="5"/>
+    <ellipse cx="376" cy="300" rx="36" ry="13" fill="#0d1015" stroke="url(#steel)" stroke-width="5"/>
+    <ellipse cx="466" cy="300" rx="36" ry="13" fill="#0d1015" stroke="url(#steel)" stroke-width="5"/>
+  </g>
+  <rect x="152" y="228" width="300" height="48" rx="14" fill="url(#steel)"/>
+  ${boltRing(302, 252, 138, 7, 8, 0, '#6a7889')}
+  <circle cx="418" cy="252" r="18" fill="${paint}"/>
+  <circle cx="418" cy="252" r="8" fill="${darken(paint, 0.45)}"/>
+  <path d="M 520 300 q 96 -6 130 48" fill="none" stroke="#151a21" stroke-width="17" stroke-linecap="round"/>
+  <circle cx="648" cy="374" r="42" fill="none" stroke="url(#steel)" stroke-width="14" stroke-dasharray="11 12"/>
+  <circle cx="648" cy="374" r="34" fill="url(#steel)"/>
+  <circle cx="648" cy="374" r="15" fill="#0d1015"/>
+  <rect x="524" y="196" width="150" height="60" rx="12" fill="#1c222c" stroke="#4a5361" stroke-width="3"/>
+  <path d="M 546 260 v 26 q 0 14 14 14 h 66" fill="none" stroke="#39424f" stroke-width="9" stroke-linecap="round"/>`
+
+/** Frame name to drawing. */
+const VEHICLE_FRAMES = {
+  'Side profile': sideProfile,
+  'Front view': (paint, s) => faceView(paint, s, 'front'),
+  'Rear view': (paint, s) => faceView(paint, s, 'rear'),
+  Interior: (paint) => interiorView(paint),
+  'Wheels & trim': wheelView,
+  Dashboard: (paint) => dashboardView(paint),
+  'Cargo area': (paint) => cargoView(paint),
+  'Engine bay': (paint) => engineView(paint),
+}
+
+/**
+ * Frames that fill their own background rather than standing in the showroom.
+ * An interior or an engine bay is not a car on a showroom floor, so painting
+ * the wall and floor behind one is what would make it look wrong.
+ */
+const ENCLOSED_FRAMES = new Set(['Interior', 'Dashboard', 'Engine bay'])
+
+/**
+ * Vehicle template. Same shape as `sceneSvg` — text-free, backdrops to the
+ * card's own rounded edge — but with the showroom behind the exterior frames
+ * and the paint gradient rebuilt from this vehicle's colour.
+ */
+function vehicleSvg({ paint, bodyType, frameIndex }) {
+  const shape = BODY_SHAPES[bodyType] ?? BODY_SHAPES.Sedan
+  const frame = GALLERY_FRAMES[frameIndex] ?? 'Side profile'
+  const draw = VEHICLE_FRAMES[frame] ?? sideProfile
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${WIDTH} ${HEIGHT}" width="${WIDTH}" height="${HEIGHT}" role="presentation">
+  <defs>${showroomDefs(paint)}
+  </defs>
+  ${ENCLOSED_FRAMES.has(frame) ? '' : showroomBackdrop}
+  ${draw(paint, shape)}
+  <rect width="${WIDTH}" height="${HEIGHT}" fill="url(#vig)"/>
+</svg>
+`
+}
+
 /**
  * One glyph per part category, keyed by the `category` in `src/data/parts.js`.
  *
@@ -908,19 +1484,33 @@ function teamFiles() {
   })
 }
 
-/** One SVG per frame of every vehicle's gallery. */
+/**
+ * One SVG per frame of every vehicle's gallery.
+ *
+ * Paths come from `vehiclePlaceholder()`, not from `vehicle.images`: once real
+ * photographs exist, `vehicle.images` holds their paths, and writing SVG to
+ * those would both clobber nothing and leave the actual placeholders stale.
+ * The placeholder is what `OptimizedImage` falls back to, so it has to keep
+ * being regenerated correctly whether or not photographs are present.
+ *
+ * `label` and `sublabel` are still passed for the summary `main()` prints, but
+ * the vehicle template ignores them — the record's name is already on the card
+ * that shows the image, and the gallery already numbers its frames.
+ */
 function vehicleFiles() {
+  const frames = Array.from({ length: 8 }, (_, index) => index)
+
   return VEHICLES.flatMap((vehicle) =>
-    vehicle.images.map((imagePath, index) => ({
-      path: imagePath.replace(/^\/images\//, ''),
+    frames.slice(0, vehicle.imageCount).map((index) => ({
+      path: vehiclePlaceholder(vehicle.slug, index + 1).replace(/^\/images\//, ''),
       category: 'vehicles',
       label: `${vehicle.year} ${vehicle.make} ${vehicle.model}`,
       sublabel: `${vehicle.trim} · ${GALLERY_FRAMES[index] ?? `Photo ${index + 1}`}`,
-      stroke: PAINT[vehicle.exteriorColor] ?? '#2c5f9e',
-      glyph:
-        GALLERY_FRAMES[index] === 'Interior'
-          ? interiorGlyph(PAINT[vehicle.exteriorColor] ?? '#2c5f9e')
-          : carGlyph(PAINT[vehicle.exteriorColor] ?? '#2c5f9e'),
+      vehicle: {
+        paint: PAINT[vehicle.exteriorColor] ?? '#2c5f9e',
+        bodyType: vehicle.bodyType,
+        frameIndex: index,
+      },
     })),
   )
 }
