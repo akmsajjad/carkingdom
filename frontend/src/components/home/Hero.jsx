@@ -7,6 +7,7 @@ import OptimizedImage from '../common/OptimizedImage'
 import Select from '../common/Select'
 import useCarousel from '../../hooks/useCarousel'
 import { MAKES } from '../../data/vehicles'
+import { HERO_IMAGE } from '../../utils/images'
 import { cn } from '../../utils/cn'
 import { formatNumber, formatPrice, estimateMonthlyPayment } from '../../utils/format'
 
@@ -15,22 +16,6 @@ const TRUST_POINTS = [
   { icon: Gauge, label: 'Full history report included' },
   { icon: Wallet, label: 'Financing for all credit' },
 ]
-
-/**
- * The hero's background texture, as CSS values rather than as an image file.
- *
- * Two 1px gradient rules produce the grid; `GRID_FADE` then masks it so it
- * dissolves toward the bottom instead of stopping at a hard line above the
- * statistics. Kept in `style` rather than in a utility class because the
- * layer list and the mask are not worth spending theme tokens on for one
- * component — and because §3 rules out adding a background image for this.
- */
-const GRID_LINES =
-  'linear-gradient(to right, rgb(255 255 255 / 0.05) 1px, transparent 1px), ' +
-  'linear-gradient(to bottom, rgb(255 255 255 / 0.05) 1px, transparent 1px)'
-
-const GRID_FADE =
-  'radial-gradient(ellipse 90% 70% at 50% 0%, #000 25%, transparent 100%)'
 
 /**
  * The homepage hero.
@@ -67,101 +52,100 @@ export default function Hero({ vehicles = [], stats }) {
 
   return (
     <section className="relative overflow-hidden bg-brand-900 text-white">
-      {/* The background is built from light rather than from a picture.
-          The only imagery this project ships is the generated SVG set, and its
-          artwork is pale line-drawing on a near-white ground — blown up to
-          full-bleed here it would drop a light-blue rectangle into a graphite
-          and red hero and read as a placeholder.
+      {/* The background is a photograph of the showroom under a shadow stack.
+          The section's own box is untouched: the photograph is the section's
+          `background`, and every layer over it is `absolute` with
+          `pointer-events-none`, so nothing here can move a measurement inside
+          the hero or intercept a click on the search form.
 
-          So the depth comes from stacked translucent layers instead: a lit
-          base, four soft radial glows, a single diagonal sheen, and a fine
-          grid. All of them are `absolute` and `aria-hidden`, so the section's
-          own box — and therefore every measurement inside it — is unchanged.
+          The constraint shaping the whole stack is the eyebrow. It is
+          `text-accent-400` — #f06f80, luminance 0.31 — at 14px, so it needs the
+          full 4.5:1, which means the pixels behind it must sit at luminance
+          0.031 or below: about #313131, or nearly black. It is the only colour
+          in the hero without contrast to spare; white and `brand-100` hold 12:1
+          or better on anything this stack produces.
 
-          The one hard constraint shaping all of it is the eyebrow. It is
-          `text-accent-400` at 14px, so it needs the full 4.5:1, and it is the
-          only colour in the hero without contrast to spare — white and
-          `brand-100` hold 12:1 or better almost anywhere on this surface. That
-          is why the base stays between brand-700 and brand-950 and the lighter
-          values are spent only on glows, only where the copy is not. Every
-          figure here was measured against the painted pixels at eight widths
-          from 360 to 1440; the worst result anywhere in the hero is 4.85:1. */}
+          That would be easy on a flat surface, and this photograph is not one.
+          It is a bright, busy, high-contrast frame: saturated orange, red and
+          blue car bodies across the left, yellow floor markings under them, and
+          blown-out strip lights and reflections scattered through it. Almost
+          none of it is dark enough to carry `accent-400` on its own, and the
+          bright parts land behind the copy rather than beside it.
 
-      {/* 1 — The base wash. The hero is lit from the right, so the surface reads
-             as a material with a direction to the light rather than as flat
-             black. The bright end is held back until `lg`, and that is a
-             measured decision, not a stylistic one: below it the layout is a
-             single column and the text runs the full width, so that end lands
-             under the eyebrow — whose `accent-400` is the one colour in the
-             hero without contrast to spare. Below `lg` the surface stays deep
-             and the life comes from the glows alone. */}
+          So the stack is three layers — a uniform base that sets the floor, a
+          red wash for the brand, and a gentle gradient for depth — and the
+          numbers come from the arithmetic in the note on the base. The picture
+          is meant to read as a dark showroom behind the content, not as a
+          photograph competing with it; every value below was measured against
+          the painted pixels at seven widths, not chosen by eye. */}
+
+      {/* 1 — The photograph. `cover` plus `center` so it fills the section at
+             every width without distorting, and the section keeps `bg-brand-900`
+             underneath as the ground if the file ever fails to arrive. Decorative
+             — the hero's meaning is in its copy — so it is a background rather
+             than an `<img>` and carries no alt text. It is above the fold, so
+             there is nothing to gain from lazy-loading it; see the note on its
+             file size in `images.js`. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-gradient-to-r from-brand-950 via-brand-900 to-brand-900 lg:to-brand-700/50"
+        className="pointer-events-none absolute inset-0 bg-cover bg-center"
+        style={{ backgroundImage: `url(${HERO_IMAGE})` }}
       />
 
-      {/* 2 — Key light, upper right, behind the vehicle card — the one place a
-             lighter field costs no contrast. Only meaningful once the card is
-             actually beside the copy rather than below it, so `lg` again: at
-             phone width this 40rem disc covers the entire viewport and puts the
-             eyebrow on a light ground. At `lg` it can be generous, because the
-             text column sits well clear of it. */}
+      {/* 2 — The base scrim, and the number here is the one worth explaining.
+             The brief suggests starting around 0.60–0.70 and adjusting to the
+             image; measurement against the painted pixels put this frame above
+             that, at 0.80.
+
+             The reason is arithmetic, not taste. `accent-400` needs 4.5:1, which
+             caps the pixels behind it at luminance 0.031 — about rgb(49,49,49).
+             This photograph has genuine blown highlights: ceiling strip lights,
+             a white car, and reflections on a polished floor, several of them
+             sitting behind the copy. A white pixel needs 0.807 of opacity to
+             reach 0.031 from 1.0, so no scrim below that clears 4.5:1 wherever
+             one of those highlights lands. That is the floor, and the gradient
+             below is built to stay above it rather than to dip through it. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -top-40 -right-28 hidden size-[40rem] rounded-full bg-brand-700/25 blur-3xl lg:block lg:bg-brand-600/30"
+        className="pointer-events-none absolute inset-0 bg-black/80"
       />
 
-      {/* 2b — A second, warmer glow low and right, so the light has a source and
-             a reflection rather than one bright corner. `lg` only, for the same
-             reason: below it there is nowhere to put a 30rem disc that the copy
-             does not occupy. */}
+      {/* 3 — The brand wash: `accent-950` (#420512) rising from the bottom left.
+             Black alone makes a photograph look switched off, so this warms the
+             shadow toward the brand red and picks up where the picture is
+             genuinely dark — the floor along the bottom edge. Kept to 12% at the
+             top of the diagonal: the eyebrow lives up there, and every point of
+             red luminance spent under it comes straight out of its 4.5:1. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -right-20 -bottom-44 hidden size-[30rem] rounded-full bg-accent-600/15 blur-3xl lg:block"
+        className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-accent-950/55 via-accent-950/12 to-transparent"
       />
 
-      {/* 3 — Accent bloom, upper left: the brand red bleeding through the glass.
-             Held to 6%, and that is the whole point of it. `accent-600` is
-             already a fairly bright red; at 20% it put enough luminance under
-             the eyebrow to drop `accent-400` to 3.8:1 on a phone, and on a
-             phone there is nowhere to move a 34rem disc to. At this weight it
-             warms the corner without spending any of the contrast budget. */}
+      {/* 4 — The directional gradient. It is weighted toward the right at `lg`,
+             which is the reverse of the obvious move, and the reason is the
+             card. Its caption sits on the brightest ground anywhere in the hero:
+             `bg-white/5` over the scrim lifts whatever is behind it by about a
+             dozen levels, and the blurred floor reflections underneath are
+             bright to start with. On the previous background that left
+             `accent-400` on the "Featured" label at 4.08:1 at 1024 and 4.46:1 at
+             1280 — both under the 4.5 it needs, on the one label in the hero
+             that was already failing before any of this. Spending the extra
+             depth on the card's side of the frame is what recovers it, to
+             5.9:1. The left is left alone because the eyebrow has headroom
+             there, measuring 5.6–6.1:1 against a ground of roughly rgb(35,25,20).
+
+             Below `lg` there is no second column: the copy and the card share
+             one width, so the wash turns vertical and is deepest through the
+             middle, which is where the card's caption lands. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -top-64 -left-56 size-[34rem] rounded-full bg-accent-600/6 blur-3xl"
+        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/35 via-black/38 to-black/40 lg:bg-gradient-to-r lg:from-black/28 lg:via-black/30 lg:to-black/40"
       />
 
-      {/* 4 — Cool fill, lower left, so the bottom edge is not a dead flat field.
-             Far enough down to clear the text on every breakpoint. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -bottom-56 -left-40 size-[32rem] rounded-full bg-brand-600/20 blur-3xl"
-      />
-
-      {/* 5 — A single soft diagonal sheen, the way light crosses a pane. This is
-             what makes the surface read as glass rather than as a gradient. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -top-1/3 left-1/4 h-[170%] w-[28rem] -rotate-12 bg-gradient-to-b from-white/[0.03] via-white/[0.008] to-transparent blur-2xl"
-      />
-
-      {/* 6 — A fine grid, held at the threshold of visibility. Pure CSS, so it
-             adds no request and no asset — just the suggestion of technical
-             drawing behind the content. The mask fades it out toward the
-             bottom so it never fights the statistics row. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-20"
-        style={{
-          backgroundImage: GRID_LINES,
-          backgroundSize: '48px 48px',
-          maskImage: GRID_FADE,
-          WebkitMaskImage: GRID_FADE,
-        }}
-      />
-
-      {/* 7 — The lit top edge. One hairline is the whole trick: it reads as the
-             top face of a pane catching the light. */}
+      {/* 5 — The lit top edge. One hairline is the whole trick: it reads as the
+             top face of a pane catching the light, and it still works over a
+             photograph — it separates the hero from the header rather than from
+             a gradient. */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent"

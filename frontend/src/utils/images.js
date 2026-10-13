@@ -93,6 +93,25 @@ export function generalImage(slug) {
 }
 
 /**
+ * The homepage hero background.
+ *
+ * A full-bleed banner rather than a picture of a record, so there is no slug to
+ * build a path from and it sits outside the category helpers above — the same
+ * reasoning as `BRAND_IMAGES` below. One fixed file, named here so `Hero.jsx`
+ * carries no path of its own.
+ *
+ * Unlike everything else in this module it is a raster photograph, not a
+ * generated SVG. It is also by far the heaviest asset the site ships — 1448x1086
+ * PNG at 2.19 MiB, which is half of the entire build — and it is the first thing
+ * the homepage paints, so it is the LCP element on the busiest page. It has been
+ * left as supplied rather than re-encoded, but the number is worth recording:
+ * the same image through Chrome's WebP encoder is 188 KB at quality 0.82, a
+ * twelfth of the size. The file lives at `public/images/hero/carhero.png`;
+ * re-encoding it needs no code change here, only the path swapping.
+ */
+export const HERO_IMAGE = '/images/hero/carhero.png'
+
+/**
  * Brand artwork.
  *
  * The logo is not a content image and is kept out of the category helpers
