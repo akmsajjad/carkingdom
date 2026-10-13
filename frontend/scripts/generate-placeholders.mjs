@@ -163,7 +163,16 @@ function escapeXml(value) {
     .replace(/"/g, '&quot;')
 }
 
-function svg({ category, label, sublabel, stroke, glyph }) {
+/**
+ * A file carrying `scene` gets the scene template instead of the label template,
+ * and ignores every other field — the service images are the only files drawn
+ * that way, and the two templates share nothing: no caption, no border, and a
+ * different backdrop. Branching here rather than at the call site keeps `main()`
+ * writing a single uniform list.
+ */
+function svg({ category, label, sublabel, stroke, glyph, scene }) {
+  if (scene) return sceneSvg(scene)
+
   const body = glyph ?? GLYPHS[category] ?? GLYPHS.general
   const title = escapeXml(label)
   const subtitle = escapeXml(sublabel)
@@ -197,7 +206,9 @@ const STATIC_FILES = [
   // Required fallbacks, one per category in src/utils/images.js
   { path: 'general/default.svg', category: 'general', label: 'Car Kingdom', sublabel: 'Saskatoon, Saskatchewan' },
   { path: 'vehicles/default.svg', category: 'vehicles', label: 'Vehicle photo coming soon', sublabel: '' },
-  { path: 'services/default.svg', category: 'services', label: 'Service', sublabel: 'Car Kingdom' },
+  // `services/default.svg` is also mandatory, but it is drawn as a scene like
+  // the rest of its category, so it is built in `serviceFiles()` — this list is
+  // evaluated at module scope and cannot read a table declared below it.
   { path: 'parts/default.svg', category: 'parts', label: 'Part', sublabel: 'Car Kingdom' },
   { path: 'team/default.svg', category: 'team', label: 'Team member', sublabel: 'Car Kingdom' },
   { path: 'careers/default.svg', category: 'careers', label: 'Car Kingdom careers', sublabel: 'Join the team' },
@@ -304,6 +315,418 @@ const SERVICE_GLYPHS = {
     </g>`,
 }
 
+/* ==========================================================================
+   Service scenes
+   ==========================================================================
+   The service images are drawn to a different brief from everything else in
+   this file, which is why they get their own template rather than a glyph.
+
+   Every other placeholder is a line drawing on a pale ground with the name and
+   the price set underneath it, because those images are read at full width on a
+   detail page or a card in a catalogue. The service images are read at 284x213
+   in a card that already prints the service name, the duration and the price
+   directly below them — so the caption is duplicated at 9px, and the flat glyph
+   above it reads as a missing image rather than as artwork.
+
+   So these are scenes instead: a workshop backdrop shared by all of them, a
+   shaded subject, and no text. The backdrop is a single function so the
+   treatment is identical across the set — same wall, same floor line, same
+   light pool, same key light, same vignette — and only the subject changes.
+   That is the "consistent image treatment" the cards need, and it is the one
+   thing a per-service drawing would drift away from.
+
+   Lighting is deliberately one-directional: key light upper right, contact
+   shadow under everything, vignette last. Without the contact shadows the
+   subjects float; without the vignette the pale backdrop runs flat into the
+   card's white edge.
+
+   The palette is the site's — graphite, steel, white, and the brand red as the
+   single accent (the caliper, the filter band, the gauge knobs, the rim cap).
+   Nothing warm is introduced: the amber in `index.css` belongs to the star
+   ratings, and a second warm colour here would spend it.
+
+   These delete themselves when real photography arrives — drop the .jpg in and
+   repoint `serviceImage()`; see the note at the top of this file.
+   ========================================================================== */
+
+/** Shared scene palette and lighting. Ids are per-file, so reusing them is safe. */
+const SCENE_DEFS = `
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e8eef5"/>
+      <stop offset="0.62" stop-color="#d6e0ea"/>
+      <stop offset="1" stop-color="#c5d1df"/>
+    </linearGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b7c3d1"/>
+      <stop offset="1" stop-color="#8b98aa"/>
+    </linearGradient>
+    <radialGradient id="pool" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.62"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="key" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vig" cx="0.5" cy="0.47" r="0.74">
+      <stop offset="0.52" stop-color="#10131a" stop-opacity="0"/>
+      <stop offset="1" stop-color="#10131a" stop-opacity="0.26"/>
+    </radialGradient>
+    <linearGradient id="steel" x1="0" y1="0" x2="0.34" y2="1">
+      <stop offset="0" stop-color="#f6f8fb"/>
+      <stop offset="0.34" stop-color="#ccd6e1"/>
+      <stop offset="0.68" stop-color="#98a6b8"/>
+      <stop offset="1" stop-color="#6a7889"/>
+    </linearGradient>
+    <linearGradient id="steelDark" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#5f6c7f"/>
+      <stop offset="0.5" stop-color="#3d4757"/>
+      <stop offset="1" stop-color="#222833"/>
+    </linearGradient>
+    <linearGradient id="graphite" x1="0" y1="0" x2="0.38" y2="1">
+      <stop offset="0" stop-color="#3b4353"/>
+      <stop offset="1" stop-color="#161a22"/>
+    </linearGradient>
+    <linearGradient id="rubber" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#525b6a"/>
+      <stop offset="0.55" stop-color="#2b313c"/>
+      <stop offset="1" stop-color="#12151b"/>
+    </linearGradient>
+    <linearGradient id="red" x1="0" y1="0" x2="0.34" y2="1">
+      <stop offset="0" stop-color="#f2637a"/>
+      <stop offset="0.45" stop-color="#d81f3c"/>
+      <stop offset="1" stop-color="#980b21"/>
+    </linearGradient>
+    <linearGradient id="oil" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#6d5f42"/>
+      <stop offset="0.45" stop-color="#3d3324"/>
+      <stop offset="1" stop-color="#191410"/>
+    </linearGradient>
+    <linearGradient id="screen" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#a8d6ec"/>
+      <stop offset="1" stop-color="#3d7ba4"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="0.25" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#e4eaf1"/>
+    </linearGradient>
+    <linearGradient id="foam" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.6" stop-color="#e6edf4"/>
+      <stop offset="1" stop-color="#c2cedb"/>
+    </linearGradient>
+    <linearGradient id="hoseBlue" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#5b9dc6"/>
+      <stop offset="1" stop-color="#215a80"/>
+    </linearGradient>`
+
+/** Soft contact shadow. Without it every subject floats above the floor. */
+const contactShadow = (cx, cy, rx, ry, opacity = 0.2) =>
+  `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="#2b3240" opacity="${opacity}"/>`
+
+/** A four-point star, for the detailing scene's shine. */
+const star = (cx, cy, s, opacity = 0.92) => {
+  const k = (s * 0.17).toFixed(1)
+  return `<path transform="translate(${cx},${cy})" fill="#ffffff" opacity="${opacity}" d="M0 ${-s} Q${k} ${-k} ${s} 0 Q${k} ${k} 0 ${s} Q${-k} ${k} ${-s} 0 Q${-k} ${-k} 0 ${-s} Z"/>`
+}
+
+/** A ring of drilled holes, used by the brake rotor. */
+const boltRing = (cx, cy, radius, holeRadius, count, startAngle, fill) =>
+  Array.from({ length: count }, (_, index) => {
+    const angle = ((startAngle + (360 / count) * index) * Math.PI) / 180
+    const x = (cx + radius * Math.cos(angle)).toFixed(1)
+    const y = (cy + radius * Math.sin(angle)).toFixed(1)
+    return `<circle cx="${x}" cy="${y}" r="${holeRadius}" fill="${fill}"/>`
+  }).join('')
+
+/** A spoke, drawn from the hub outward and rotated into place. */
+const spokes = (cx, cy, count, length, width) =>
+  Array.from({ length: count }, (_, index) => {
+    const angle = (360 / count) * index
+    return `<rect x="${-width / 2}" y="${-length}" width="${width}" height="${length}" rx="${width / 2}" transform="translate(${cx},${cy}) rotate(${angle})" fill="url(#steel)"/>`
+  }).join('')
+
+const SERVICE_SCENES = {
+  /** Oil & filter change — a spin-on filter, a funnel, and the drain pan. */
+  oil: `
+    ${contactShadow(400, 486, 250, 22)}
+    <g>
+      ${contactShadow(248, 470, 78, 15, 0.18)}
+      <ellipse cx="248" cy="418" rx="52" ry="24" fill="url(#steelDark)"/>
+      <rect x="196" y="300" width="104" height="122" fill="url(#steelDark)"/>
+      <rect x="196" y="306" width="104" height="10" fill="url(#red)"/>
+      <rect x="188" y="282" width="120" height="24" rx="7" fill="url(#steel)"/>
+      <g fill="#0f1219" opacity="0.45">
+        <rect x="198" y="284" width="6" height="20" rx="3"/>
+        <rect x="214" y="284" width="6" height="20" rx="3"/>
+        <rect x="230" y="284" width="6" height="20" rx="3"/>
+        <rect x="246" y="284" width="6" height="20" rx="3"/>
+        <rect x="262" y="284" width="6" height="20" rx="3"/>
+        <rect x="278" y="284" width="6" height="20" rx="3"/>
+        <rect x="294" y="284" width="6" height="20" rx="3"/>
+      </g>
+      <rect x="196" y="330" width="104" height="8" fill="#0f1219" opacity="0.25"/>
+    </g>
+    <g>
+      <path d="M338 182 L502 182 L434 296 L406 296 Z" fill="url(#steel)"/>
+      <ellipse cx="420" cy="182" rx="82" ry="16" fill="url(#steelDark)"/>
+      <ellipse cx="420" cy="182" rx="66" ry="11" fill="#0f1219" opacity="0.7"/>
+      <rect x="406" y="292" width="28" height="46" rx="8" fill="url(#steelDark)"/>
+    </g>
+    <path d="M410 338 q-6 44 4 88 h14 q10 -44 4 -88 Z" fill="url(#oil)"/>
+    <path d="M416 340 q-4 42 2 80" fill="none" stroke="#f6f8fb" stroke-width="3" opacity="0.5"/>
+    <g>
+      <ellipse cx="400" cy="424" rx="146" ry="12" fill="#0d1015"/>
+      <path d="M262 424 L538 424 L568 478 Q572 490 558 490 L242 490 Q228 490 232 478 Z" fill="url(#graphite)"/>
+      <rect x="254" y="416" width="292" height="14" rx="7" fill="url(#steel)"/>
+      <ellipse cx="400" cy="424" rx="130" ry="9" fill="#0d1015"/>
+      <ellipse cx="400" cy="424" rx="104" ry="6" fill="#2a2419"/>
+    </g>
+    <g transform="translate(672,418) rotate(-26)">
+      ${contactShadow(0, 36, 76, 10, 0.16)}
+      <rect x="-56" y="-11" width="120" height="22" rx="11" fill="url(#steel)"/>
+      <circle cx="-62" cy="0" r="21" fill="none" stroke="url(#steel)" stroke-width="17"/>
+      <path d="M86 -30 a32 32 0 1 0 0 60" fill="none" stroke="url(#steel)" stroke-width="20"/>
+    </g>`,
+
+  /** Brake repair — a vented rotor, a red caliper, and a pad. */
+  brake: `
+    ${contactShadow(352, 474, 210, 24)}
+    <circle cx="352" cy="318" r="150" fill="url(#steel)"/>
+    <circle cx="352" cy="318" r="150" fill="none" stroke="#5f6c7f" stroke-width="5" opacity="0.45"/>
+    <circle cx="352" cy="318" r="120" fill="none" stroke="#7a8899" stroke-width="3" opacity="0.6"/>
+    <circle cx="352" cy="318" r="90" fill="none" stroke="#8f9daf" stroke-width="26" opacity="0.55"/>
+    ${boltRing(352, 318, 134, 13, 8, 0, '#93a1b2')}
+    ${boltRing(352, 318, 134, 13, 8, 22.5, '#eef2f7')}
+    <circle cx="352" cy="318" r="58" fill="url(#steelDark)"/>
+    ${boltRing(352, 318, 40, 9, 5, 90, '#0d1015')}
+    <circle cx="352" cy="318" r="27" fill="#0d1015"/>
+    <circle cx="352" cy="318" r="27" fill="none" stroke="#6a7889" stroke-width="4"/>
+    <g>
+      <rect x="450" y="212" width="64" height="212" rx="28" fill="url(#red)"/>
+      <rect x="468" y="250" width="28" height="136" rx="14" fill="#7d0a1c"/>
+      <circle cx="482" cy="234" r="10" fill="url(#steel)"/>
+      <circle cx="482" cy="402" r="10" fill="url(#steel)"/>
+      <rect x="450" y="212" width="64" height="212" rx="28" fill="none" stroke="#7d0a1c" stroke-width="3" opacity="0.5"/>
+    </g>
+    <g transform="translate(198,430) rotate(-13)">
+      ${contactShadow(0, 30, 62, 10, 0.18)}
+      <rect x="-56" y="-16" width="112" height="30" rx="7" fill="url(#steel)"/>
+      <rect x="-48" y="-11" width="96" height="20" rx="5" fill="#39414f"/>
+    </g>`,
+
+  /** Tires — a treaded tire on a five-spoke alloy. */
+  tire: `
+    ${contactShadow(400, 490, 195, 24)}
+    <circle cx="400" cy="310" r="168" fill="url(#rubber)"/>
+    <circle cx="400" cy="310" r="172" fill="none" stroke="#0d1015" stroke-width="10" opacity="0.5"/>
+    <circle cx="400" cy="310" r="152" fill="none" stroke="#0c0e14" stroke-width="30" stroke-dasharray="28 20" opacity="0.85"/>
+    <circle cx="400" cy="310" r="122" fill="none" stroke="#6d7889" stroke-width="3" opacity="0.45"/>
+    <circle cx="400" cy="310" r="104" fill="url(#steel)"/>
+    <circle cx="400" cy="310" r="96" fill="url(#steelDark)"/>
+    ${spokes(400, 310, 5, 100, 34)}
+    <circle cx="400" cy="310" r="34" fill="url(#steel)"/>
+    ${boltRing(400, 310, 54, 8, 5, 90, '#1d222b')}
+    <circle cx="400" cy="310" r="16" fill="url(#red)"/>
+    <circle cx="400" cy="310" r="16" fill="none" stroke="#7d0a1c" stroke-width="3"/>`,
+
+  /** Diagnostics — a scan tool on a live-data screen, cable to the port. */
+  diagnostics: `
+    ${contactShadow(346, 452, 210, 24)}
+    <ellipse cx="346" cy="286" rx="176" ry="126" fill="#7fc0e2" opacity="0.16"/>
+    <rect x="196" y="180" width="300" height="256" rx="26" fill="url(#graphite)"/>
+    <rect x="196" y="180" width="300" height="256" rx="26" fill="none" stroke="#5f6c7f" stroke-width="3" opacity="0.55"/>
+    <rect x="220" y="206" width="252" height="146" rx="14" fill="url(#screen)"/>
+    <rect x="220" y="206" width="252" height="146" rx="14" fill="none" stroke="#0f2433" stroke-width="4" opacity="0.5"/>
+    <path d="M240 300 L278 300 L294 258 L312 336 L330 282 L350 300 L390 300 L408 262 L426 322 L444 292 L462 300"
+          fill="none" stroke="#f2fbff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <g>
+      <rect x="240" y="322" width="64" height="11" rx="5" fill="#f2fbff" opacity="0.85"/>
+      <rect x="312" y="322" width="98" height="11" rx="5" fill="url(#red)"/>
+      <rect x="418" y="322" width="36" height="11" rx="5" fill="#f2fbff" opacity="0.5"/>
+    </g>
+    <g fill="url(#steelDark)">
+      <rect x="220" y="374" width="58" height="32" rx="9"/>
+      <rect x="288" y="374" width="58" height="32" rx="9"/>
+      <rect x="356" y="374" width="58" height="32" rx="9"/>
+      <rect x="424" y="374" width="48" height="32" rx="9"/>
+    </g>
+    <circle cx="446" cy="390" r="9" fill="url(#red)"/>
+    <path d="M496 328 q76 12 82 78 q4 46 -44 54" fill="none" stroke="#1d222b" stroke-width="13" stroke-linecap="round"/>
+    <g transform="translate(534,462) rotate(-7)">
+      ${contactShadow(0, 34, 48, 10, 0.2)}
+      <rect x="-38" y="-28" width="76" height="56" rx="12" fill="url(#steelDark)"/>
+      <g fill="#0d1015">
+        <rect x="-24" y="-14" width="9" height="28" rx="3"/>
+        <rect x="-8" y="-14" width="9" height="28" rx="3"/>
+        <rect x="8" y="-14" width="9" height="28" rx="3"/>
+        <rect x="24" y="-14" width="9" height="28" rx="3"/>
+      </g>
+    </g>`,
+
+  /** Safety inspection — the checklist, ticked. */
+  inspection: `
+    ${contactShadow(400, 498, 190, 20)}
+    <rect x="246" y="150" width="308" height="336" rx="22" fill="url(#paper)"/>
+    <rect x="246" y="150" width="308" height="336" rx="22" fill="none" stroke="#b3bfcd" stroke-width="3"/>
+    <rect x="352" y="128" width="96" height="46" rx="14" fill="url(#steel)"/>
+    <rect x="370" y="120" width="60" height="24" rx="9" fill="url(#steelDark)"/>
+    <g>
+      <rect x="286" y="222" width="30" height="30" rx="8" fill="none" stroke="#98a6b8" stroke-width="3"/>
+      <path d="M292 238 l9 10 l18 -22" fill="none" stroke="url(#red)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="336" y="230" width="170" height="11" rx="5" fill="#c3ccd8"/>
+
+      <rect x="286" y="276" width="30" height="30" rx="8" fill="none" stroke="#98a6b8" stroke-width="3"/>
+      <path d="M292 292 l9 10 l18 -22" fill="none" stroke="url(#red)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="336" y="284" width="140" height="11" rx="5" fill="#c3ccd8"/>
+
+      <rect x="286" y="330" width="30" height="30" rx="8" fill="none" stroke="#98a6b8" stroke-width="3"/>
+      <path d="M292 346 l9 10 l18 -22" fill="none" stroke="url(#red)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="336" y="338" width="182" height="11" rx="5" fill="#c3ccd8"/>
+
+      <rect x="286" y="384" width="30" height="30" rx="8" fill="none" stroke="#98a6b8" stroke-width="3"/>
+      <path d="M292 400 l9 10 l18 -22" fill="none" stroke="url(#red)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="336" y="392" width="124" height="11" rx="5" fill="#c3ccd8"/>
+
+      <rect x="286" y="438" width="30" height="30" rx="8" fill="none" stroke="#98a6b8" stroke-width="3"/>
+      <rect x="336" y="446" width="156" height="11" rx="5" fill="#c3ccd8"/>
+    </g>
+    <g transform="translate(636,440) rotate(-20)">
+      ${contactShadow(0, 62, 44, 9, 0.18)}
+      <rect x="-30" y="-58" width="60" height="116" rx="16" fill="url(#graphite)"/>
+      <rect x="-30" y="-16" width="60" height="12" fill="url(#red)"/>
+      <rect x="-42" y="-76" width="84" height="30" rx="11" fill="url(#steel)"/>
+      <ellipse cx="0" cy="-78" rx="30" ry="10" fill="#f2f6fa"/>
+    </g>`,
+
+  /** Air conditioning — a manifold gauge set with its two hoses. */
+  ac: `
+    ${contactShadow(400, 508, 220, 20)}
+    <g>
+      <circle cx="286" cy="270" r="98" fill="url(#steel)"/>
+      <circle cx="286" cy="270" r="84" fill="#fbfcfe"/>
+      <circle cx="286" cy="270" r="70" fill="none" stroke="#4e5a6b" stroke-width="4" stroke-dasharray="3 12"/>
+      <circle cx="286" cy="270" r="76" fill="none" stroke="url(#red)" stroke-width="9" stroke-dasharray="52 426" transform="rotate(-74 286 270)"/>
+      <line x1="286" y1="270" x2="316" y2="228" stroke="#171b23" stroke-width="7" stroke-linecap="round"/>
+      <circle cx="286" cy="270" r="11" fill="url(#steelDark)"/>
+    </g>
+    <g>
+      <circle cx="514" cy="270" r="98" fill="url(#steel)"/>
+      <circle cx="514" cy="270" r="84" fill="#fbfcfe"/>
+      <circle cx="514" cy="270" r="70" fill="none" stroke="#4e5a6b" stroke-width="4" stroke-dasharray="3 12"/>
+      <circle cx="514" cy="270" r="76" fill="none" stroke="url(#hoseBlue)" stroke-width="9" stroke-dasharray="52 426" transform="rotate(-74 514 270)"/>
+      <line x1="514" y1="270" x2="548" y2="236" stroke="#171b23" stroke-width="7" stroke-linecap="round"/>
+      <circle cx="514" cy="270" r="11" fill="url(#steelDark)"/>
+    </g>
+    <rect x="356" y="326" width="88" height="108" rx="18" fill="url(#graphite)"/>
+    <rect x="356" y="326" width="88" height="108" rx="18" fill="none" stroke="#5f6c7f" stroke-width="3" opacity="0.5"/>
+    <circle cx="380" cy="358" r="17" fill="url(#red)"/>
+    <circle cx="420" cy="358" r="17" fill="url(#red)"/>
+    <rect x="374" y="396" width="52" height="10" rx="5" fill="#5f6c7f"/>
+    <path d="M356 412 q-104 26 -128 96" fill="none" stroke="url(#red)" stroke-width="19" stroke-linecap="round"/>
+    <path d="M444 412 q104 26 128 96" fill="none" stroke="url(#hoseBlue)" stroke-width="19" stroke-linecap="round"/>
+    <rect x="206" y="500" width="44" height="30" rx="8" fill="url(#steelDark)"/>
+    <rect x="550" y="500" width="44" height="30" rx="8" fill="url(#steelDark)"/>`,
+
+  /** Engine & transmission — an inline block with its cam cover and timing gear. */
+  engine: `
+    ${contactShadow(400, 484, 250, 22)}
+    <path d="M214 300 h372 v140 q0 20 -20 20 h-332 q-20 0 -20 -20 Z" fill="url(#steelDark)"/>
+    <path d="M214 300 h372 v140 q0 20 -20 20 h-332 q-20 0 -20 -20 Z" fill="none" stroke="#1d222b" stroke-width="4" opacity="0.5"/>
+    <rect x="222" y="332" width="356" height="14" fill="#0f1219" opacity="0.28"/>
+    <rect x="222" y="392" width="356" height="14" fill="#0f1219" opacity="0.22"/>
+    <g>
+      <ellipse cx="280" cy="300" rx="42" ry="15" fill="#0d1015"/>
+      <ellipse cx="280" cy="300" rx="42" ry="15" fill="none" stroke="url(#steel)" stroke-width="6"/>
+      <ellipse cx="376" cy="300" rx="42" ry="15" fill="#0d1015"/>
+      <ellipse cx="376" cy="300" rx="42" ry="15" fill="none" stroke="url(#steel)" stroke-width="6"/>
+      <ellipse cx="472" cy="300" rx="42" ry="15" fill="#0d1015"/>
+      <ellipse cx="472" cy="300" rx="42" ry="15" fill="none" stroke="url(#steel)" stroke-width="6"/>
+      <ellipse cx="568" cy="300" rx="42" ry="15" fill="#0d1015"/>
+      <ellipse cx="568" cy="300" rx="42" ry="15" fill="none" stroke="url(#steel)" stroke-width="6"/>
+    </g>
+    <rect x="236" y="228" width="328" height="54" rx="16" fill="url(#steel)"/>
+    <rect x="236" y="228" width="328" height="54" rx="16" fill="none" stroke="#6a7889" stroke-width="3"/>
+    <g fill="#6a7889">
+      <circle cx="268" cy="242" r="7"/><circle cx="336" cy="242" r="7"/><circle cx="404" cy="242" r="7"/><circle cx="472" cy="242" r="7"/>
+      <circle cx="268" cy="268" r="7"/><circle cx="336" cy="268" r="7"/><circle cx="404" cy="268" r="7"/><circle cx="472" cy="268" r="7"/>
+    </g>
+    <circle cx="528" cy="255" r="21" fill="url(#graphite)"/>
+    <circle cx="528" cy="255" r="10" fill="url(#red)"/>
+    <g transform="translate(636,374)">
+      <circle cx="0" cy="0" r="66" fill="none" stroke="url(#steel)" stroke-width="18" stroke-dasharray="14 15"/>
+      <circle cx="0" cy="0" r="56" fill="url(#steel)"/>
+      <circle cx="0" cy="0" r="24" fill="#0d1015"/>
+      <circle cx="0" cy="0" r="24" fill="none" stroke="url(#steelDark)" stroke-width="8"/>
+      ${boltRing(0, 0, 40, 7, 6, 0, '#5f6c7f')}
+    </g>
+    <path d="M636 292 q0 -46 -60 -54" fill="none" stroke="#1d222b" stroke-width="15" stroke-linecap="round"/>`,
+
+  /** Detailing — a dual-action polisher and the shine it leaves. */
+  sparkle: `
+    ${contactShadow(400, 494, 215, 24, 0.22)}
+    <ellipse cx="400" cy="466" rx="246" ry="52" fill="url(#pool)"/>
+    <path d="M244 424 v16 a156 44 0 0 0 312 0 v-16 Z" fill="#9dabbb"/>
+    <ellipse cx="400" cy="424" rx="156" ry="44" fill="url(#foam)"/>
+    <ellipse cx="400" cy="424" rx="156" ry="44" fill="none" stroke="#93a1b2" stroke-width="3"/>
+    <ellipse cx="400" cy="412" rx="140" ry="30" fill="url(#steel)"/>
+    <ellipse cx="400" cy="412" rx="140" ry="30" fill="none" stroke="#8d9aab" stroke-width="3"/>
+    <g transform="translate(400,286) rotate(-12)">
+      <rect x="-44" y="34" width="88" height="84" rx="18" fill="url(#steelDark)"/>
+      <rect x="-24" y="-184" width="48" height="96" rx="24" fill="url(#steelDark)"/>
+      <ellipse cx="0" cy="-182" rx="34" ry="16" fill="url(#red)"/>
+      <rect x="-62" y="-100" width="124" height="150" rx="32" fill="url(#graphite)"/>
+      <rect x="-62" y="-100" width="124" height="150" rx="32" fill="none" stroke="#5f6c7f" stroke-width="3" opacity="0.5"/>
+      <rect x="-62" y="-30" width="124" height="26" fill="url(#red)"/>
+      <g fill="#5f6c7f" opacity="0.8">
+        <rect x="-44" y="-76" width="88" height="7" rx="3.5"/>
+        <rect x="-44" y="-58" width="88" height="7" rx="3.5"/>
+      </g>
+    </g>
+    ${star(238, 194, 34)}
+    ${star(566, 238, 24, 0.85)}
+    ${star(608, 392, 18, 0.75)}
+    ${star(186, 356, 17, 0.7)}
+    ${star(320, 122, 15, 0.6)}`,
+
+  /** The services fallback — a ring spanner and a socket. */
+  default: `
+    ${contactShadow(384, 500, 230, 22)}
+    <g transform="translate(384,326) rotate(-31)">
+      <rect x="-138" y="-17" width="276" height="34" rx="17" fill="url(#steel)"/>
+      <circle cx="-142" cy="0" r="47" fill="none" stroke="url(#steel)" stroke-width="29"/>
+      <circle cx="142" cy="0" r="47" fill="none" stroke="url(#steel)" stroke-width="29"/>
+      <rect x="-138" y="-17" width="276" height="9" rx="5" fill="#f6f8fb" opacity="0.5"/>
+    </g>
+    <g transform="translate(622,452)">
+      ${contactShadow(0, 48, 52, 10, 0.2)}
+      <path d="M-34 -44 h68 v72 a34 34 0 0 1 -68 0 Z" fill="url(#steelDark)"/>
+      <rect x="-34" y="-12" width="68" height="11" fill="url(#red)"/>
+      <ellipse cx="0" cy="-44" rx="34" ry="12" fill="#0d1015"/>
+      <ellipse cx="0" cy="-44" rx="22" ry="7" fill="#2a2f3a"/>
+    </g>`,
+}
+
+/**
+ * Scene template. Text-free and border-free, unlike `svg()` below: these are
+ * read inside a card that prints the name itself, and the painted backdrop runs
+ * to the card's own rounded edge.
+ */
+function sceneSvg(body) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${WIDTH} ${HEIGHT}" width="${WIDTH}" height="${HEIGHT}" role="presentation">
+  <defs>${SCENE_DEFS}
+  </defs>
+  <rect width="${WIDTH}" height="${HEIGHT}" fill="url(#wall)"/>
+  <rect y="330" width="${WIDTH}" height="${HEIGHT - 330}" fill="url(#floor)"/>
+  <rect y="329" width="${WIDTH}" height="2" fill="#7f8c9e" opacity="0.45"/>
+  <ellipse cx="400" cy="352" rx="344" ry="62" fill="url(#pool)"/>
+  <ellipse cx="574" cy="92" rx="272" ry="212" fill="url(#key)"/>
+  ${body}
+  <rect width="${WIDTH}" height="${HEIGHT}" fill="url(#vig)"/>
+</svg>
+`
+}
+
 /**
  * One glyph per part category, keyed by the `category` in `src/data/parts.js`.
  *
@@ -403,15 +826,39 @@ function partFiles() {
   }))
 }
 
-/** One SVG per service in the catalogue, so the cards are distinguishable. */
+/**
+ * One SVG per service in the catalogue, so the cards are distinguishable.
+ *
+ * These carry `scene` rather than `glyph`, so they render without the name and
+ * price caption the other placeholders set — the card prints those itself, two
+ * lines under the picture. `label` is still passed because it is what a reader
+ * of this script expects to see beside the path; `svg()` ignores it for a scene.
+ * See `SERVICE_SCENES` for why the service images are the exception.
+ *
+ * The category fallback is built here rather than listed in `STATIC_FILES`
+ * because it is drawn from `SERVICE_SCENES`, and `STATIC_FILES` is evaluated at
+ * module scope — a `const` declared below it would throw on access. It has to
+ * be a scene and not the usual labelled placeholder, because it is what
+ * `OptimizedImage` swaps in when a service image is missing: a lone captioned
+ * wrench among eight workshop scenes reads as a broken card.
+ */
 function serviceFiles() {
-  return SERVICES.map((service) => ({
-    path: `services/${service.slug}.svg`,
-    category: 'services',
-    label: service.name,
-    sublabel: `${service.duration} · from $${service.startingPrice}`,
-    glyph: SERVICE_GLYPHS[service.icon],
-  }))
+  return [
+    {
+      path: 'services/default.svg',
+      category: 'services',
+      label: 'Service',
+      sublabel: 'Car Kingdom',
+      scene: SERVICE_SCENES.default,
+    },
+    ...SERVICES.map((service) => ({
+      path: `services/${service.slug}.svg`,
+      category: 'services',
+      label: service.name,
+      sublabel: `${service.duration} · from $${service.startingPrice}`,
+      scene: SERVICE_SCENES[service.icon] ?? SERVICE_SCENES.default,
+    })),
+  ]
 }
 
 /**

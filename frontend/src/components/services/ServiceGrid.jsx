@@ -7,11 +7,19 @@ import { cn } from '../../utils/cn'
 /**
  * The service results area.
  *
- * `columns` exists because the same grid is used at two densities: the full
- * catalogue on `/services`, which wants three across on a wide screen, and the
- * related strip on a detail page, where three narrower cards read better beside
- * a heading. Everything else about the two is identical, which is why they are
- * one component.
+ * `columns` exists because the same grid is used at three densities: the full
+ * catalogue on `/services`, which wants three across on a wide screen; the
+ * related strip on a detail page, where two narrower cards read better beside a
+ * heading; and the homepage's service-department band, which is a four-across
+ * highlight of the featured jobs. Everything else about them is identical,
+ * which is why they are one component.
+ *
+ * `showIcon` is for that homepage band. Its cards carry the photograph and the
+ * photograph only — the band is a visual index of the four jobs, and the icon
+ * tile that earns its place on `/services` (where it gives a scannable shape to
+ * nine rows of similar text) is just a second, smaller picture of the same
+ * thing once the photo is above it. Defaults to `true`, so the catalogue and
+ * the related strip are unchanged.
  *
  * `emptyAction` is supplied by the page rather than built here: the escape
  * route out of an empty list is the page's business, and the two call sites
@@ -21,12 +29,14 @@ import { cn } from '../../utils/cn'
 const COLUMNS = {
   2: 'grid gap-6 sm:grid-cols-2',
   3: 'grid gap-6 sm:grid-cols-2 xl:grid-cols-3',
+  4: 'grid gap-6 sm:grid-cols-2 lg:grid-cols-4',
 }
 
 export default function ServiceGrid({
   services = [],
   loading = false,
   compact = false,
+  showIcon = true,
   columns = 3,
   skeletonCount = 3,
   emptyAction,
@@ -61,7 +71,12 @@ export default function ServiceGrid({
   return (
     <div className={classes}>
       {services.map((service) => (
-        <ServiceCard key={service.slug} service={service} compact={compact} />
+        <ServiceCard
+          key={service.slug}
+          service={service}
+          compact={compact}
+          showIcon={showIcon}
+        />
       ))}
     </div>
   )

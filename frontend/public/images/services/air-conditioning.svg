@@ -1,27 +1,105 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600" role="img" aria-label="A/C Service &amp; Recharge">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600" role="presentation">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#eff5fb"/>
-      <stop offset="1" stop-color="#d7e5f5"/>
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e8eef5"/>
+      <stop offset="0.62" stop-color="#d6e0ea"/>
+      <stop offset="1" stop-color="#c5d1df"/>
+    </linearGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b7c3d1"/>
+      <stop offset="1" stop-color="#8b98aa"/>
+    </linearGradient>
+    <radialGradient id="pool" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.62"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="key" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vig" cx="0.5" cy="0.47" r="0.74">
+      <stop offset="0.52" stop-color="#10131a" stop-opacity="0"/>
+      <stop offset="1" stop-color="#10131a" stop-opacity="0.26"/>
+    </radialGradient>
+    <linearGradient id="steel" x1="0" y1="0" x2="0.34" y2="1">
+      <stop offset="0" stop-color="#f6f8fb"/>
+      <stop offset="0.34" stop-color="#ccd6e1"/>
+      <stop offset="0.68" stop-color="#98a6b8"/>
+      <stop offset="1" stop-color="#6a7889"/>
+    </linearGradient>
+    <linearGradient id="steelDark" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#5f6c7f"/>
+      <stop offset="0.5" stop-color="#3d4757"/>
+      <stop offset="1" stop-color="#222833"/>
+    </linearGradient>
+    <linearGradient id="graphite" x1="0" y1="0" x2="0.38" y2="1">
+      <stop offset="0" stop-color="#3b4353"/>
+      <stop offset="1" stop-color="#161a22"/>
+    </linearGradient>
+    <linearGradient id="rubber" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#525b6a"/>
+      <stop offset="0.55" stop-color="#2b313c"/>
+      <stop offset="1" stop-color="#12151b"/>
+    </linearGradient>
+    <linearGradient id="red" x1="0" y1="0" x2="0.34" y2="1">
+      <stop offset="0" stop-color="#f2637a"/>
+      <stop offset="0.45" stop-color="#d81f3c"/>
+      <stop offset="1" stop-color="#980b21"/>
+    </linearGradient>
+    <linearGradient id="oil" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#6d5f42"/>
+      <stop offset="0.45" stop-color="#3d3324"/>
+      <stop offset="1" stop-color="#191410"/>
+    </linearGradient>
+    <linearGradient id="screen" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#a8d6ec"/>
+      <stop offset="1" stop-color="#3d7ba4"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="0.25" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#e4eaf1"/>
+    </linearGradient>
+    <linearGradient id="foam" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.6" stop-color="#e6edf4"/>
+      <stop offset="1" stop-color="#c2cedb"/>
+    </linearGradient>
+    <linearGradient id="hoseBlue" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#5b9dc6"/>
+      <stop offset="1" stop-color="#215a80"/>
     </linearGradient>
   </defs>
-  <rect width="800" height="600" fill="url(#bg)"/>
-  <rect x="16" y="16" width="768" height="568" rx="20"
-        fill="none" stroke="#2c5f9e" stroke-opacity="0.18" stroke-width="2"/>
+  <rect width="800" height="600" fill="url(#wall)"/>
+  <rect y="330" width="800" height="270" fill="url(#floor)"/>
+  <rect y="329" width="800" height="2" fill="#7f8c9e" opacity="0.45"/>
+  <ellipse cx="400" cy="352" rx="344" ry="62" fill="url(#pool)"/>
+  <ellipse cx="574" cy="92" rx="272" ry="212" fill="url(#key)"/>
   
-    <g transform="translate(0, -10)" fill="none" stroke="#2c5f9e" stroke-width="14"
-       stroke-linecap="round" stroke-linejoin="round">
-      <g stroke-width="13">
-        <path d="M400 190 L400 470"/>
-        <path d="M279 260 L521 400"/><path d="M521 260 L279 400"/>
-        <path d="M400 246 L362 208"/><path d="M400 246 L438 208"/>
-        <path d="M400 414 L362 452"/><path d="M400 414 L438 452"/>
-      </g>
+    <ellipse cx="400" cy="508" rx="220" ry="20" fill="#2b3240" opacity="0.2"/>
+    <g>
+      <circle cx="286" cy="270" r="98" fill="url(#steel)"/>
+      <circle cx="286" cy="270" r="84" fill="#fbfcfe"/>
+      <circle cx="286" cy="270" r="70" fill="none" stroke="#4e5a6b" stroke-width="4" stroke-dasharray="3 12"/>
+      <circle cx="286" cy="270" r="76" fill="none" stroke="url(#red)" stroke-width="9" stroke-dasharray="52 426" transform="rotate(-74 286 270)"/>
+      <line x1="286" y1="270" x2="316" y2="228" stroke="#171b23" stroke-width="7" stroke-linecap="round"/>
+      <circle cx="286" cy="270" r="11" fill="url(#steelDark)"/>
     </g>
-  <text x="400" y="500" text-anchor="middle"
-        font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="26"
-        font-weight="600" fill="#33475f">A/C Service &amp; Recharge</text>
-  <text x="400" y="536" text-anchor="middle"
-        font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="19"
-        fill="#6b7d92">1–2 hours · from $159</text>
+    <g>
+      <circle cx="514" cy="270" r="98" fill="url(#steel)"/>
+      <circle cx="514" cy="270" r="84" fill="#fbfcfe"/>
+      <circle cx="514" cy="270" r="70" fill="none" stroke="#4e5a6b" stroke-width="4" stroke-dasharray="3 12"/>
+      <circle cx="514" cy="270" r="76" fill="none" stroke="url(#hoseBlue)" stroke-width="9" stroke-dasharray="52 426" transform="rotate(-74 514 270)"/>
+      <line x1="514" y1="270" x2="548" y2="236" stroke="#171b23" stroke-width="7" stroke-linecap="round"/>
+      <circle cx="514" cy="270" r="11" fill="url(#steelDark)"/>
+    </g>
+    <rect x="356" y="326" width="88" height="108" rx="18" fill="url(#graphite)"/>
+    <rect x="356" y="326" width="88" height="108" rx="18" fill="none" stroke="#5f6c7f" stroke-width="3" opacity="0.5"/>
+    <circle cx="380" cy="358" r="17" fill="url(#red)"/>
+    <circle cx="420" cy="358" r="17" fill="url(#red)"/>
+    <rect x="374" y="396" width="52" height="10" rx="5" fill="#5f6c7f"/>
+    <path d="M356 412 q-104 26 -128 96" fill="none" stroke="url(#red)" stroke-width="19" stroke-linecap="round"/>
+    <path d="M444 412 q104 26 128 96" fill="none" stroke="url(#hoseBlue)" stroke-width="19" stroke-linecap="round"/>
+    <rect x="206" y="500" width="44" height="30" rx="8" fill="url(#steelDark)"/>
+    <rect x="550" y="500" width="44" height="30" rx="8" fill="url(#steelDark)"/>
+  <rect width="800" height="600" fill="url(#vig)"/>
 </svg>

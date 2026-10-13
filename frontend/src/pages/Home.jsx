@@ -24,7 +24,7 @@ export default function Home() {
 
   return (
     <>
-      <Hero vehicle={featured?.[0]} stats={stats} />
+      <Hero vehicles={featured ?? []} stats={stats} />
 
       <FeaturedVehicles
         vehicles={featured ?? []}

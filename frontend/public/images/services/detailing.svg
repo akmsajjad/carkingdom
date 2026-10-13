@@ -1,24 +1,103 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600" role="img" aria-label="Detailing &amp; Interior Cleaning">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600" role="presentation">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#eff5fb"/>
-      <stop offset="1" stop-color="#d7e5f5"/>
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e8eef5"/>
+      <stop offset="0.62" stop-color="#d6e0ea"/>
+      <stop offset="1" stop-color="#c5d1df"/>
+    </linearGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b7c3d1"/>
+      <stop offset="1" stop-color="#8b98aa"/>
+    </linearGradient>
+    <radialGradient id="pool" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.62"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="key" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vig" cx="0.5" cy="0.47" r="0.74">
+      <stop offset="0.52" stop-color="#10131a" stop-opacity="0"/>
+      <stop offset="1" stop-color="#10131a" stop-opacity="0.26"/>
+    </radialGradient>
+    <linearGradient id="steel" x1="0" y1="0" x2="0.34" y2="1">
+      <stop offset="0" stop-color="#f6f8fb"/>
+      <stop offset="0.34" stop-color="#ccd6e1"/>
+      <stop offset="0.68" stop-color="#98a6b8"/>
+      <stop offset="1" stop-color="#6a7889"/>
+    </linearGradient>
+    <linearGradient id="steelDark" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#5f6c7f"/>
+      <stop offset="0.5" stop-color="#3d4757"/>
+      <stop offset="1" stop-color="#222833"/>
+    </linearGradient>
+    <linearGradient id="graphite" x1="0" y1="0" x2="0.38" y2="1">
+      <stop offset="0" stop-color="#3b4353"/>
+      <stop offset="1" stop-color="#161a22"/>
+    </linearGradient>
+    <linearGradient id="rubber" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#525b6a"/>
+      <stop offset="0.55" stop-color="#2b313c"/>
+      <stop offset="1" stop-color="#12151b"/>
+    </linearGradient>
+    <linearGradient id="red" x1="0" y1="0" x2="0.34" y2="1">
+      <stop offset="0" stop-color="#f2637a"/>
+      <stop offset="0.45" stop-color="#d81f3c"/>
+      <stop offset="1" stop-color="#980b21"/>
+    </linearGradient>
+    <linearGradient id="oil" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#6d5f42"/>
+      <stop offset="0.45" stop-color="#3d3324"/>
+      <stop offset="1" stop-color="#191410"/>
+    </linearGradient>
+    <linearGradient id="screen" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#a8d6ec"/>
+      <stop offset="1" stop-color="#3d7ba4"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="0.25" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#e4eaf1"/>
+    </linearGradient>
+    <linearGradient id="foam" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.6" stop-color="#e6edf4"/>
+      <stop offset="1" stop-color="#c2cedb"/>
+    </linearGradient>
+    <linearGradient id="hoseBlue" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#5b9dc6"/>
+      <stop offset="1" stop-color="#215a80"/>
     </linearGradient>
   </defs>
-  <rect width="800" height="600" fill="url(#bg)"/>
-  <rect x="16" y="16" width="768" height="568" rx="20"
-        fill="none" stroke="#2c5f9e" stroke-opacity="0.18" stroke-width="2"/>
+  <rect width="800" height="600" fill="url(#wall)"/>
+  <rect y="330" width="800" height="270" fill="url(#floor)"/>
+  <rect y="329" width="800" height="2" fill="#7f8c9e" opacity="0.45"/>
+  <ellipse cx="400" cy="352" rx="344" ry="62" fill="url(#pool)"/>
+  <ellipse cx="574" cy="92" rx="272" ry="212" fill="url(#key)"/>
   
-    <g transform="translate(0, -10)" fill="none" stroke="#2c5f9e" stroke-width="14"
-       stroke-linecap="round" stroke-linejoin="round">
-      <path d="M356 200 Q356 300 256 300 Q356 300 356 400 Q356 300 456 300 Q356 300 356 200 Z"/>
-      <path d="M528 336 Q528 396 468 396 Q528 396 528 456 Q528 396 588 396 Q528 396 528 336 Z"/>
-      <path d="M244 420 Q244 470 194 470 Q244 470 244 520 Q244 470 294 470 Q244 470 244 420 Z"/>
+    <ellipse cx="400" cy="494" rx="215" ry="24" fill="#2b3240" opacity="0.22"/>
+    <ellipse cx="400" cy="466" rx="246" ry="52" fill="url(#pool)"/>
+    <path d="M244 424 v16 a156 44 0 0 0 312 0 v-16 Z" fill="#9dabbb"/>
+    <ellipse cx="400" cy="424" rx="156" ry="44" fill="url(#foam)"/>
+    <ellipse cx="400" cy="424" rx="156" ry="44" fill="none" stroke="#93a1b2" stroke-width="3"/>
+    <ellipse cx="400" cy="412" rx="140" ry="30" fill="url(#steel)"/>
+    <ellipse cx="400" cy="412" rx="140" ry="30" fill="none" stroke="#8d9aab" stroke-width="3"/>
+    <g transform="translate(400,286) rotate(-12)">
+      <rect x="-44" y="34" width="88" height="84" rx="18" fill="url(#steelDark)"/>
+      <rect x="-24" y="-184" width="48" height="96" rx="24" fill="url(#steelDark)"/>
+      <ellipse cx="0" cy="-182" rx="34" ry="16" fill="url(#red)"/>
+      <rect x="-62" y="-100" width="124" height="150" rx="32" fill="url(#graphite)"/>
+      <rect x="-62" y="-100" width="124" height="150" rx="32" fill="none" stroke="#5f6c7f" stroke-width="3" opacity="0.5"/>
+      <rect x="-62" y="-30" width="124" height="26" fill="url(#red)"/>
+      <g fill="#5f6c7f" opacity="0.8">
+        <rect x="-44" y="-76" width="88" height="7" rx="3.5"/>
+        <rect x="-44" y="-58" width="88" height="7" rx="3.5"/>
+      </g>
     </g>
-  <text x="400" y="500" text-anchor="middle"
-        font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="26"
-        font-weight="600" fill="#33475f">Detailing &amp; Interior Cleaning</text>
-  <text x="400" y="536" text-anchor="middle"
-        font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="19"
-        fill="#6b7d92">3–4 hours · from $179</text>
+    <path transform="translate(238,194)" fill="#ffffff" opacity="0.92" d="M0 -34 Q5.8 -5.8 34 0 Q5.8 5.8 0 34 Q-5.8 5.8 -34 0 Q-5.8 -5.8 0 -34 Z"/>
+    <path transform="translate(566,238)" fill="#ffffff" opacity="0.85" d="M0 -24 Q4.1 -4.1 24 0 Q4.1 4.1 0 24 Q-4.1 4.1 -24 0 Q-4.1 -4.1 0 -24 Z"/>
+    <path transform="translate(608,392)" fill="#ffffff" opacity="0.75" d="M0 -18 Q3.1 -3.1 18 0 Q3.1 3.1 0 18 Q-3.1 3.1 -18 0 Q-3.1 -3.1 0 -18 Z"/>
+    <path transform="translate(186,356)" fill="#ffffff" opacity="0.7" d="M0 -17 Q2.9 -2.9 17 0 Q2.9 2.9 0 17 Q-2.9 2.9 -17 0 Q-2.9 -2.9 0 -17 Z"/>
+    <path transform="translate(320,122)" fill="#ffffff" opacity="0.6" d="M0 -15 Q2.6 -2.6 15 0 Q2.6 2.6 0 15 Q-2.6 2.6 -15 0 Q-2.6 -2.6 0 -15 Z"/>
+  <rect width="800" height="600" fill="url(#vig)"/>
 </svg>

@@ -1,28 +1,110 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600" role="img" aria-label="Diagnostics &amp; Check Engine Light">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600" role="presentation">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#eff5fb"/>
-      <stop offset="1" stop-color="#d7e5f5"/>
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e8eef5"/>
+      <stop offset="0.62" stop-color="#d6e0ea"/>
+      <stop offset="1" stop-color="#c5d1df"/>
+    </linearGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b7c3d1"/>
+      <stop offset="1" stop-color="#8b98aa"/>
+    </linearGradient>
+    <radialGradient id="pool" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.62"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="key" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vig" cx="0.5" cy="0.47" r="0.74">
+      <stop offset="0.52" stop-color="#10131a" stop-opacity="0"/>
+      <stop offset="1" stop-color="#10131a" stop-opacity="0.26"/>
+    </radialGradient>
+    <linearGradient id="steel" x1="0" y1="0" x2="0.34" y2="1">
+      <stop offset="0" stop-color="#f6f8fb"/>
+      <stop offset="0.34" stop-color="#ccd6e1"/>
+      <stop offset="0.68" stop-color="#98a6b8"/>
+      <stop offset="1" stop-color="#6a7889"/>
+    </linearGradient>
+    <linearGradient id="steelDark" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#5f6c7f"/>
+      <stop offset="0.5" stop-color="#3d4757"/>
+      <stop offset="1" stop-color="#222833"/>
+    </linearGradient>
+    <linearGradient id="graphite" x1="0" y1="0" x2="0.38" y2="1">
+      <stop offset="0" stop-color="#3b4353"/>
+      <stop offset="1" stop-color="#161a22"/>
+    </linearGradient>
+    <linearGradient id="rubber" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#525b6a"/>
+      <stop offset="0.55" stop-color="#2b313c"/>
+      <stop offset="1" stop-color="#12151b"/>
+    </linearGradient>
+    <linearGradient id="red" x1="0" y1="0" x2="0.34" y2="1">
+      <stop offset="0" stop-color="#f2637a"/>
+      <stop offset="0.45" stop-color="#d81f3c"/>
+      <stop offset="1" stop-color="#980b21"/>
+    </linearGradient>
+    <linearGradient id="oil" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#6d5f42"/>
+      <stop offset="0.45" stop-color="#3d3324"/>
+      <stop offset="1" stop-color="#191410"/>
+    </linearGradient>
+    <linearGradient id="screen" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#a8d6ec"/>
+      <stop offset="1" stop-color="#3d7ba4"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="0.25" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#e4eaf1"/>
+    </linearGradient>
+    <linearGradient id="foam" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.6" stop-color="#e6edf4"/>
+      <stop offset="1" stop-color="#c2cedb"/>
+    </linearGradient>
+    <linearGradient id="hoseBlue" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#5b9dc6"/>
+      <stop offset="1" stop-color="#215a80"/>
     </linearGradient>
   </defs>
-  <rect width="800" height="600" fill="url(#bg)"/>
-  <rect x="16" y="16" width="768" height="568" rx="20"
-        fill="none" stroke="#2c5f9e" stroke-opacity="0.18" stroke-width="2"/>
+  <rect width="800" height="600" fill="url(#wall)"/>
+  <rect y="330" width="800" height="270" fill="url(#floor)"/>
+  <rect y="329" width="800" height="2" fill="#7f8c9e" opacity="0.45"/>
+  <ellipse cx="400" cy="352" rx="344" ry="62" fill="url(#pool)"/>
+  <ellipse cx="574" cy="92" rx="272" ry="212" fill="url(#key)"/>
   
-    <g transform="translate(0, -10)" fill="none" stroke="#2c5f9e" stroke-width="14"
-       stroke-linecap="round" stroke-linejoin="round">
-      <path d="M228 438 A172 172 0 1 1 572 438"/>
-      <path d="M400 438 L492 306"/>
-      <circle cx="400" cy="438" r="20"/>
-      <g stroke-width="12">
-        <path d="M244 372 L272 366"/><path d="M400 268 L400 296"/>
-        <path d="M556 372 L528 366"/>
+    <ellipse cx="346" cy="452" rx="210" ry="24" fill="#2b3240" opacity="0.2"/>
+    <ellipse cx="346" cy="286" rx="176" ry="126" fill="#7fc0e2" opacity="0.16"/>
+    <rect x="196" y="180" width="300" height="256" rx="26" fill="url(#graphite)"/>
+    <rect x="196" y="180" width="300" height="256" rx="26" fill="none" stroke="#5f6c7f" stroke-width="3" opacity="0.55"/>
+    <rect x="220" y="206" width="252" height="146" rx="14" fill="url(#screen)"/>
+    <rect x="220" y="206" width="252" height="146" rx="14" fill="none" stroke="#0f2433" stroke-width="4" opacity="0.5"/>
+    <path d="M240 300 L278 300 L294 258 L312 336 L330 282 L350 300 L390 300 L408 262 L426 322 L444 292 L462 300"
+          fill="none" stroke="#f2fbff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <g>
+      <rect x="240" y="322" width="64" height="11" rx="5" fill="#f2fbff" opacity="0.85"/>
+      <rect x="312" y="322" width="98" height="11" rx="5" fill="url(#red)"/>
+      <rect x="418" y="322" width="36" height="11" rx="5" fill="#f2fbff" opacity="0.5"/>
+    </g>
+    <g fill="url(#steelDark)">
+      <rect x="220" y="374" width="58" height="32" rx="9"/>
+      <rect x="288" y="374" width="58" height="32" rx="9"/>
+      <rect x="356" y="374" width="58" height="32" rx="9"/>
+      <rect x="424" y="374" width="48" height="32" rx="9"/>
+    </g>
+    <circle cx="446" cy="390" r="9" fill="url(#red)"/>
+    <path d="M496 328 q76 12 82 78 q4 46 -44 54" fill="none" stroke="#1d222b" stroke-width="13" stroke-linecap="round"/>
+    <g transform="translate(534,462) rotate(-7)">
+      <ellipse cx="0" cy="34" rx="48" ry="10" fill="#2b3240" opacity="0.2"/>
+      <rect x="-38" y="-28" width="76" height="56" rx="12" fill="url(#steelDark)"/>
+      <g fill="#0d1015">
+        <rect x="-24" y="-14" width="9" height="28" rx="3"/>
+        <rect x="-8" y="-14" width="9" height="28" rx="3"/>
+        <rect x="8" y="-14" width="9" height="28" rx="3"/>
+        <rect x="24" y="-14" width="9" height="28" rx="3"/>
       </g>
     </g>
-  <text x="400" y="500" text-anchor="middle"
-        font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="26"
-        font-weight="600" fill="#33475f">Diagnostics &amp; Check Engine Light</text>
-  <text x="400" y="536" text-anchor="middle"
-        font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="19"
-        fill="#6b7d92">1–2 hours · from $119</text>
+  <rect width="800" height="600" fill="url(#vig)"/>
 </svg>

@@ -16,8 +16,18 @@ import { formatPriceExact } from '../../utils/format'
  * `compact` drops the photograph and keeps the icon, for the related-services
  * strip on a detail page, where three more landscape images would compete with
  * the one the customer is actually looking at.
+ *
+ * `showIcon` drops the icon and keeps the photograph — the other trade, for the
+ * homepage band, whose whole point is the picture. Both default to today's
+ * behaviour, so the catalogue is untouched; see `ServiceGrid` for why the two
+ * are separate switches rather than one `tone`.
  */
-export default function ServiceCard({ service, compact = false, className }) {
+export default function ServiceCard({
+  service,
+  compact = false,
+  showIcon = true,
+  className,
+}) {
   const href = `/services/${service.slug}`
 
   return (
@@ -40,11 +50,20 @@ export default function ServiceCard({ service, compact = false, className }) {
       )}
 
       <div className="flex flex-1 flex-col p-5">
-        <span className="flex size-11 items-center justify-center rounded-lg bg-brand-50">
-          <ServiceIcon name={service.icon} className="size-5 text-brand-700" />
-        </span>
+        {showIcon && (
+          <span className="flex size-11 items-center justify-center rounded-lg bg-brand-50">
+            <ServiceIcon name={service.icon} className="size-5 text-brand-700" />
+          </span>
+        )}
 
-        <h3 className="mt-4 text-base leading-snug font-semibold text-brand-900">
+        {/* `mt-4` is the gap under the icon tile. With no tile the title is the
+            first thing in the padded body, and the padding is the whole gap. */}
+        <h3
+          className={cn(
+            'text-base leading-snug font-semibold text-brand-900',
+            showIcon && 'mt-4',
+          )}
+        >
           <Link
             to={href}
             className="rounded-sm after:absolute after:inset-0 after:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500"
